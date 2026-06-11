@@ -1,5 +1,5 @@
-var CACHE_NAME = 'plusone-v22';
-var urlsToCache = ['./', 'dashboard_pwa.html', 'manifest.json', 'icon.png'];
+var CACHE_NAME = 'plusone-v23';
+var urlsToCache = ['/offices/', '/offices/index.html', '/offices/dashboard_pwa.html', '/offices/manifest.json', '/offices/icon.png'];
 
 self.addEventListener('install', function(event) {
   self.skipWaiting();
