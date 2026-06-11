@@ -1,4 +1,4 @@
-﻿// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //  PLUS ONE LAW GROUP â€” Google Apps Script Backend
 //  Sheets: tenants Â· MeterData Â· Payments
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -11,8 +11,8 @@ const SHEETS = {
 
 
 // â”€â”€ Electricity tariff rates (AMD per kWh) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-const AMD_PER_KWH_DAY   = 42.39;   // T1 Day tariff   â€” edit here
-const AMD_PER_KWH_NIGHT = 21.19;   // T2 Night tariff â€” edit here
+const AMD_PER_KWH_DAY   = 54;   // T1 Day tariff   â€” edit here
+const AMD_PER_KWH_NIGHT = 45;   // T2 Night tariff â€” edit here
 
 // Headers that will be auto-created if missing
 const TENANT_HEADERS = [
@@ -324,12 +324,42 @@ function saveMeter_(p) {
     throw new Error('T1 and T2 current readings are required');
   }
 
-  const t1cur    = num_(p.t1current);
-  const t2cur    = num_(p.t2current);
+  const t1cur = num_(p.t1current);
+  const t2cur = num_(p.t2current);
+
+  // Find the existing month row before deriving the baseline. When the first
+  // stored month has no earlier row, preserve its imported serial and prior
+  // readings instead of replacing them with blanks and zeroes.
+  let rowNumber = 0;
+  if (sh.getLastRow() >= 2) {
+    const vals = sh.getRange(2, 1, sh.getLastRow() - 1, sh.getLastColumn()).getValues();
+    for (let i = 0; i < vals.length; i++) {
+      const rm = String(first_(vals[i], map, ['Month'], '')).trim();
+      const ra = officeKey_(firstNonBlank_(vals[i], map,
+        ['Office','Apt','Apartment','Room'], ''));
+      if (rm === month && ra === apt) { rowNumber = i + 2; break; }
+    }
+  }
+
+  const numCols = sh.getLastColumn();
+  const rowData = rowNumber
+    ? sh.getRange(rowNumber, 1, 1, numCols).getValues()[0].slice()
+    : new Array(numCols).fill('');
   const previous = findPreviousMeter_(sh, map, apt, month);
-  const serial   = previous.serial;
-  const t1prev   = previous.t1current;
-  const t2prev   = previous.t2current;
+  const existingSerial = String(first_(rowData, map, ['Serial'], '') || '').trim();
+  const serial = previous.serial || existingSerial || String(p.serial || '').trim();
+  const t1prev = previous.found
+    ? previous.t1current
+    : num_(first_(rowData, map, ['T1prev','T1 prev'], 0));
+  const t2prev = previous.found
+    ? previous.t2current
+    : num_(first_(rowData, map, ['T2prev','T2 prev'], 0));
+  const previousMonth = previous.found
+    ? previous.month
+    : String(first_(rowData, map, ['PreviousMonth','Previous Month'], '') || '').trim();
+  const previousAssumed = previous.found
+    ? previous.assumed
+    : bool_(first_(rowData, map, ['PreviousAssumed','Previous Assumed'], true));
 
   if (previous.found && (t1cur < t1prev || t2cur < t2prev)) {
     throw new Error(
@@ -344,24 +374,6 @@ function saveMeter_(p) {
   const amdNight = Math.round(kwhNight * AMD_PER_KWH_NIGHT);
   const totalPrevious = t1prev + t2prev;
   const amdTotal = amdDay + amdNight;
-
-  // Find existing row for this month + office (upsert)
-  let rowNumber = 0;
-  if (sh.getLastRow() >= 2) {
-    const vals = sh.getRange(2, 1, sh.getLastRow() - 1, sh.getLastColumn()).getValues();
-    for (let i = 0; i < vals.length; i++) {
-      const rm = String(first_(vals[i], map, ['Month','Ô±Õ´is'], '')).trim();
-      const ra = officeKey_(firstNonBlank_(vals[i], map,
-        ['Office','Ô³Ñ€Ð°ÑÐµÐ½rak','Apt','Apartment','Room'], ''));
-      if (rm === month && ra === apt) { rowNumber = i + 2; break; }
-    }
-  }
-
-  // Build row array in METER_HEADERS column order
-  const numCols = sh.getLastColumn();
-  const rowData = rowNumber
-    ? sh.getRange(rowNumber, 1, 1, numCols).getValues()[0].slice()
-    : new Array(numCols).fill('');
 
   function setCol(name, val) {
     const idx = map[norm_(name)];
@@ -380,8 +392,8 @@ function saveMeter_(p) {
   setCol('AMDNight',  amdNight);
   setCol('AMDTotal',  amdTotal);
   setCol('Month',     month);
-  setCol('PreviousMonth', previous.month);
-  setCol('PreviousAssumed', previous.assumed ? 'yes' : 'no');
+  setCol('PreviousMonth', previousMonth);
+  setCol('PreviousAssumed', previousAssumed ? 'yes' : 'no');
   setCol('EnteredAt', new Date());
 
   if (rowNumber) {
@@ -393,7 +405,7 @@ function saveMeter_(p) {
   return { ok: true, apt, month, serial, t1prev, t2prev,
            t1current: t1cur, t2current: t2cur,
            totalPrevious, kwhDay, kwhNight, amdDay, amdNight, amdTotal,
-           previousMonth: previous.month, previousAssumed: previous.assumed };
+           previousMonth, previousAssumed };
 }
 
 function meterMonthIndex_(month) {

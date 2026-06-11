@@ -131,7 +131,7 @@ body.offline { padding-top: 37px; }
    HEADER
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .header {
-  position: relative; z-index: 2;
+  position: sticky; top: env(safe-area-inset-top, 0); z-index: 50;
   height: var(--header-h);
   background: linear-gradient(105deg, #08182b 0%, #0b2940 62%, #0f766e 140%);
   padding: 0 max(16px, env(safe-area-inset-left)) 0 max(16px, env(safe-area-inset-left));
@@ -194,11 +194,12 @@ body.offline { padding-top: 37px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   TOP CONTROLS
+   STICKY CONTROLS
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .sticky-zone {
-  position: relative;
-  z-index: 1;
+  position: sticky;
+  top: var(--header-h);
+  z-index: 40;
   background: rgba(237,243,249,.95);
   backdrop-filter: blur(20px) saturate(160%);
   -webkit-backdrop-filter: blur(20px) saturate(160%);
@@ -1203,6 +1204,18 @@ canvas#reportChart { width: 100%; height: 130px; border-radius: 8px; }
   <!-- Stats -->
   <div id="statsGrid" class="stats-grid"></div>
 
+  <!-- Progress bars -->
+  <div id="progPanel" class="prog-panel" style="display:none"></div>
+
+  <!-- Canvas chart -->
+  <div id="chartPanel" class="chart-panel" style="display:none">
+    <div class="chart-title">
+      <span>💰 Ֆինանսական ամփոփ</span>
+      <span id="chartPct" style="color:var(--sage);font-weight:900"></span>
+    </div>
+    <canvas id="reportChart"></canvas>
+  </div>
+
   <!-- Sort -->
   <div class="sort-bar">
     <span>Կարգ.</span>
@@ -1307,7 +1320,7 @@ canvas#reportChart { width: 100%; height: 130px; border-radius: 8px; }
 /* ═══════════════════════════════════════════════
    CONSTANTS & STATE
 ═══════════════════════════════════════════════ */
-var API = 'https://script.google.com/macros/s/AKfycbxNVJ4hRZC_osAEENZe0hBysq7q03ds-GbSUmWjapWaLhvFHyyjxXeffzmYP6AHjqMA/exec';
+var API = 'https://script.google.com/macros/s/AKfycbz8lhdiLMr3DJRmvJFAxRWu1h8nsWnU3AjE9Fbt0CvwxjSmeyTVaHhV0uNw3IaAZuosBw/exec';
 
 /* JSONP helper — bypasses CORS for Google Apps Script */
 function jsonp(url) {
@@ -1910,8 +1923,7 @@ function shareReport() {
 ═══════════════════════════════════════════════ */
 function renderChart() {
   var panel = document.getElementById('chartPanel');
-  if (panel) panel.style.display = 'none';
-  return;
+  panel.style.display = '';
   var f = calcFinancials();
   var canvas = document.getElementById('reportChart');
   var dpr = window.devicePixelRatio || 1;
@@ -2705,12 +2717,13 @@ function render() {
     }
   });
 
-  // Progress bars are intentionally not shown on the dashboard.
+  // Progress bars
   var prog = document.getElementById('progPanel');
-  if (prog) {
-    prog.style.display = 'none';
-    prog.innerHTML = '';
-  }
+  prog.style.display = '';
+  prog.innerHTML =
+    progRow('⚡ Էլ. ' + ep + '% · ' + ePaid.length + '/' + eAll.length, ep, 'pf-blue') +
+    progRow('📶 Net ' + np + '% · ' + netPaid.length + '/' + netAll.length, np, 'pf-purple') +
+    progRow('🏢 Վ. ' + rp + '% · ' + (f.rentCollected ? Math.round(f.rentCollected/f.rentTotal*100) : 0) + '%', rp, 'pf-green');
 
   // Update report if open
   if (reportOpen) renderReportBody();
@@ -2925,8 +2938,8 @@ function rLabel(s) {
 ═══════════════════════════════════════════════ */
 // Drafts are isolated by month so switching months never carries readings over.
 var meterDraft = {};
-var TARIFF_DAY   = 42.39;
-var TARIFF_NIGHT = 21.19;
+var TARIFF_DAY   = 54;
+var TARIFF_NIGHT = 45;
 
 function calcMeterAmounts(t1prev, t2prev, t1cur, t2cur) {
   var totalPrevious = (Number(t1prev) || 0) + (Number(t2prev) || 0);
@@ -3046,7 +3059,7 @@ function renderMeterPanel() {
     '<div class="meter-table-wrap">' +
       '<table class="meter-table">' +
         '<thead><tr>' +
-          '<th>Office</th><th>Previous reading</th>' +
+          '<th>Office</th><th>Serial</th><th>Previous reading</th>' +
           '<th>T1 current</th><th>T2 current</th>' +
           '<th>Usage</th><th>Amount</th><th></th>' +
         '</tr></thead><tbody>';
@@ -3072,6 +3085,7 @@ function renderMeterPanel() {
           '<span class="meter-office-name">' + meterText(t.name || '-') + '</span>' +
           '<span class="meter-saved-badge' + (hasSaved ? ' show' : '') + '" id="mbadge-' + meterText(t.apt) + '">saved</span>' +
         '</td>' +
+        '<td class="meter-number-cell">' + meterText(ex.serial || baseline.serial || '-') + '</td>' +
         '<td class="meter-number-cell">' + baselineLabel + '</td>' +
         '<td><input type="number" inputmode="decimal" step="0.01" min="' + meterText(t1prev) + '" value="' + meterText(meterValue(t1cur)) + '" id="mt1cur-' + meterText(t.apt) + '" oninput="meterInputChange(\'' + meterText(t.apt) + '\')"></td>' +
         '<td><input type="number" inputmode="decimal" step="0.01" min="' + meterText(t2prev) + '" value="' + meterText(meterValue(t2cur)) + '" id="mt2cur-' + meterText(t.apt) + '" oninput="meterInputChange(\'' + meterText(t.apt) + '\')"></td>' +
