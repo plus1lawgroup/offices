@@ -1094,6 +1094,114 @@ canvas#reportChart { width: 100%; height: 130px; border-radius: 8px; }
   color: var(--ink); font-variant-numeric: tabular-nums;
 }
 
+/* Focused electricity entry */
+.electricity-summary {
+  display: grid; grid-template-columns: 1fr auto;
+  align-items: center; gap: 16px;
+  margin: 4px 0 14px; padding: 18px 20px;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(125deg, #08182b, #0d3548 68%, #0f766e);
+  color: #fff; box-shadow: 0 14px 36px rgba(6,19,36,.2);
+}
+.electricity-summary-label {
+  font-size: 10px; font-weight: 800; letter-spacing: .1em;
+  text-transform: uppercase; color: #99f6e4;
+}
+.electricity-summary-value {
+  margin-top: 3px; font-size: clamp(25px, 5vw, 38px);
+  line-height: 1; font-weight: 950; letter-spacing: -.045em;
+  font-variant-numeric: tabular-nums;
+}
+.electricity-summary-meta {
+  text-align: right; font-size: 11px; font-weight: 750;
+  color: rgba(255,255,255,.72); white-space: nowrap;
+}
+.electricity-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 12px;
+}
+.electricity-card {
+  position: relative; overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--sh-sm);
+  transition: border-color .2s, box-shadow .2s, transform .2s;
+}
+.electricity-card:focus-within {
+  border-color: rgba(20,184,166,.65);
+  box-shadow: 0 12px 30px rgba(15,89,98,.14);
+  transform: translateY(-1px);
+}
+.electricity-card-head {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 12px; padding: 16px 16px 10px;
+}
+.electricity-office {
+  font-size: 18px; font-weight: 950; letter-spacing: -.025em; color: var(--ink);
+}
+.electricity-name {
+  margin-top: 2px; color: var(--ink-3); font-size: 11px; font-weight: 700;
+  max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.electricity-context {
+  display: flex; flex-wrap: wrap; gap: 6px; padding: 0 16px 13px;
+}
+.electricity-context span {
+  padding: 5px 8px; border-radius: 8px;
+  background: var(--surface-3); color: var(--ink-2);
+  font-size: 10px; font-weight: 750; font-variant-numeric: tabular-nums;
+}
+.electricity-inputs {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 9px;
+  padding: 0 16px 13px;
+}
+.electricity-field label {
+  display: block; margin-bottom: 5px;
+  color: var(--ink-3); font-size: 10px; font-weight: 850;
+  letter-spacing: .06em; text-transform: uppercase;
+}
+.electricity-field input {
+  width: 100%; min-width: 0; padding: 12px;
+  border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--surface-2); color: var(--ink);
+  outline: none; font-size: 20px; font-weight: 900;
+  letter-spacing: -.03em; font-variant-numeric: tabular-nums;
+}
+.electricity-field input:focus {
+  border-color: var(--sage); background: #fff;
+  box-shadow: 0 0 0 3px rgba(20,184,166,.13);
+}
+.electricity-field input.dirty { border-color: var(--amber); background: #fffbeb; }
+.electricity-card-foot {
+  display: grid; grid-template-columns: 1fr auto; align-items: center;
+  gap: 12px; padding: 12px 16px;
+  border-top: 1px solid var(--border); background: var(--surface-2);
+}
+.electricity-result-label {
+  color: var(--ink-3); font-size: 10px; font-weight: 750;
+}
+.electricity-result-usage {
+  margin-top: 2px; color: var(--ink-2); font-size: 11px; font-weight: 800;
+}
+.electricity-result-total {
+  margin-top: 3px; color: var(--forest); font-size: 20px;
+  font-weight: 950; letter-spacing: -.035em; font-variant-numeric: tabular-nums;
+}
+.electricity-save {
+  min-width: 76px; padding: 10px 12px; border: 0;
+  border-radius: 10px; background: var(--forest); color: #fff;
+  font-size: 12px; font-weight: 850; cursor: pointer;
+}
+.electricity-save.saving { opacity: .55; pointer-events: none; }
+@media (max-width: 520px) {
+  .meter-header-row { align-items: stretch; flex-wrap: wrap; }
+  .meter-month-select { max-width: none; }
+  .meter-save-all-btn { flex: 1; }
+  .electricity-summary { padding: 15px 16px; }
+  .electricity-grid { grid-template-columns: 1fr; }
+}
+
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    RESPONSIVE
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
@@ -1184,7 +1292,7 @@ canvas#reportChart { width: 100%; height: 130px; border-radius: 8px; }
     <button class="chip" data-tab="today">📅 Այսօր</button>
     <button class="chip" data-tab="deposit">⟳ Դեպ.</button>
     <button class="chip" data-tab="internet">📶 Net</button>
-    <button class="chip" data-tab="meter">🔌 Մետր</button>
+    <button class="chip" data-tab="meter">⚡ Electricity</button>
   </div>
   <div class="paid-toggle-bar" id="paidToggleBar" style="display:none">
     <button class="paid-toggle-btn" id="paidToggleBtn" onclick="toggleShowPaid()">
@@ -1222,9 +1330,16 @@ canvas#reportChart { width: 100%; height: 130px; border-radius: 8px; }
   <!-- Meter Input Panel (shown when tab=meter) -->
   <div id="meterPanel" style="display:none">
     <div class="meter-header-row">
-      <label class="meter-month-label" for="meterMonthSel">⚡ Հաշվիչի ամիս</label>
+      <label class="meter-month-label" for="meterMonthSel">Electricity readings</label>
       <select id="meterMonthSel" class="meter-month-select" onchange="changeMeterMonth(this.value)"></select>
-      <button class="meter-save-all-btn" onclick="saveAllMeters()">💾 Պահ. բոլորը</button>
+      <button class="meter-save-all-btn" onclick="saveAllMeters()">Save entered</button>
+    </div>
+    <div class="electricity-summary">
+      <div>
+        <div class="electricity-summary-label">Calculated total</div>
+        <div class="electricity-summary-value" id="meterSummaryTotal">0 ֏</div>
+      </div>
+      <div class="electricity-summary-meta" id="meterSummaryMeta">0 readings</div>
     </div>
     <div id="meterList"></div>
   </div>
@@ -3034,14 +3149,7 @@ function renderMeterPanel() {
     return;
   }
 
-  var html =
-    '<div class="meter-table-wrap">' +
-      '<table class="meter-table">' +
-        '<thead><tr>' +
-          '<th>Office</th><th>Serial</th><th>Previous reading</th>' +
-          '<th>T1 current</th><th>T2 current</th>' +
-          '<th>Usage</th><th>Amount</th><th></th>' +
-        '</tr></thead><tbody>';
+  var html = '<div class="electricity-grid">';
   tenants.forEach(function(t) {
     var ex = meterReading(t.apt, meterMonth) || {};
     var draftKey = meterMonth + '_' + t.apt;
@@ -3053,28 +3161,54 @@ function renderMeterPanel() {
     var t2cur  = dr.t2current !== undefined ? dr.t2current : (ex.t2current || '');
     var calc   = calcMeterAmounts(t1prev, t2prev, t1cur, t2cur);
     var hasSaved = ex.amdDay !== undefined || ex.t1current !== undefined;
-    var baselineLabel = baseline.month +
-      (baseline.assumed ? ' · assumed' : '') +
-      '<br>T1 ' + fmt(t1prev) + ' · T2 ' + fmt(t2prev) +
-      ' · Total ' + fmt(t1prev + t2prev);
+    var serial = ex.serial || baseline.serial || '-';
+    var previous = 'T1 ' + fmt(t1prev) + ' · T2 ' + fmt(t2prev);
 
     html +=
-      '<tr id="mrow-' + meterText(t.apt) + '">' +
-        '<td class="meter-office-cell">' + meterText(t.apt) +
-          '<span class="meter-office-name">' + meterText(t.name || '-') + '</span>' +
+      '<article class="electricity-card" id="mrow-' + meterText(t.apt) + '">' +
+        '<div class="electricity-card-head">' +
+          '<div><div class="electricity-office">' + meterText(t.apt) + '</div>' +
+          '<div class="electricity-name">' + meterText(t.name || '-') + '</div></div>' +
           '<span class="meter-saved-badge' + (hasSaved ? ' show' : '') + '" id="mbadge-' + meterText(t.apt) + '">saved</span>' +
-        '</td>' +
-        '<td class="meter-number-cell">' + meterText(ex.serial || baseline.serial || '-') + '</td>' +
-        '<td class="meter-number-cell">' + baselineLabel + '</td>' +
-        '<td><input type="number" inputmode="decimal" step="0.01" min="' + meterText(t1prev) + '" value="' + meterText(meterValue(t1cur)) + '" id="mt1cur-' + meterText(t.apt) + '" oninput="meterInputChange(\'' + meterText(t.apt) + '\')"></td>' +
-        '<td><input type="number" inputmode="decimal" step="0.01" min="' + meterText(t2prev) + '" value="' + meterText(meterValue(t2cur)) + '" id="mt2cur-' + meterText(t.apt) + '" oninput="meterInputChange(\'' + meterText(t.apt) + '\')"></td>' +
-        '<td class="meter-number-cell" id="musage-' + meterText(t.apt) + '">T1 ' + fmt(calc.kwhDay) + ' · T2 ' + fmt(calc.kwhNight) + '</td>' +
-        '<td class="meter-number-cell meter-total-cell" id="mtotal-' + meterText(t.apt) + '">' + (calc.amdTotal ? fmt(calc.amdTotal) + ' \u058F' : '-') + '</td>' +
-        '<td><button class="meter-save-btn" id="msave-' + meterText(t.apt) + '" onclick="saveSingleMeter(\'' + meterText(t.apt) + '\')">Save</button></td>' +
-      '</tr>';
+        '</div>' +
+        '<div class="electricity-context">' +
+          '<span>Serial ' + meterText(serial) + '</span>' +
+          '<span>Previous · ' + meterText(previous) + '</span>' +
+        '</div>' +
+        '<div class="electricity-inputs">' +
+          '<div class="electricity-field"><label>T1 day</label><input type="number" inputmode="decimal" step="0.01" min="' + meterText(t1prev) + '" value="' + meterText(meterValue(t1cur)) + '" id="mt1cur-' + meterText(t.apt) + '" oninput="meterInputChange(\'' + meterText(t.apt) + '\')"></div>' +
+          '<div class="electricity-field"><label>T2 night</label><input type="number" inputmode="decimal" step="0.01" min="' + meterText(t2prev) + '" value="' + meterText(meterValue(t2cur)) + '" id="mt2cur-' + meterText(t.apt) + '" oninput="meterInputChange(\'' + meterText(t.apt) + '\')"></div>' +
+        '</div>' +
+        '<div class="electricity-card-foot">' +
+          '<div><div class="electricity-result-label">Usage</div>' +
+          '<div class="electricity-result-usage" id="musage-' + meterText(t.apt) + '">T1 ' + fmt(calc.kwhDay) + ' · T2 ' + fmt(calc.kwhNight) + ' kWh</div>' +
+          '<div class="electricity-result-total" id="mtotal-' + meterText(t.apt) + '">' + (calc.amdTotal ? fmt(calc.amdTotal) + ' \u058F' : '—') + '</div></div>' +
+          '<button class="electricity-save" id="msave-' + meterText(t.apt) + '" onclick="saveSingleMeter(\'' + meterText(t.apt) + '\')">Save</button>' +
+        '</div>' +
+      '</article>';
   });
-  html += '</tbody></table></div>';
+  html += '</div>';
   container.innerHTML = html;
+  updateMeterSummary();
+}
+
+function updateMeterSummary() {
+  var total = 0, entered = 0, saved = 0;
+  tenants.forEach(function(t) {
+    var t1 = document.getElementById('mt1cur-' + t.apt);
+    var t2 = document.getElementById('mt2cur-' + t.apt);
+    var ex = meterReading(t.apt, meterMonth) || {};
+    if (ex.t1current !== undefined) saved++;
+    if (!t1 || !t2 || t1.value === '' || t2.value === '') return;
+    var baseline = meterBaseline(t.apt, meterMonth);
+    var calc = calcMeterAmounts(baseline.t1, baseline.t2, t1.value, t2.value);
+    total += calc.amdTotal;
+    entered++;
+  });
+  var totalEl = document.getElementById('meterSummaryTotal');
+  var metaEl = document.getElementById('meterSummaryMeta');
+  if (totalEl) totalEl.textContent = fmt(total) + ' \u058F';
+  if (metaEl) metaEl.textContent = entered + ' entered · ' + saved + ' saved';
 }
 
 function hideMeterPanel() {
@@ -3097,10 +3231,11 @@ function meterInputChange(apt) {
     (t1cur !== '' && Number(t1cur) < baseline.t1) ||
     (t2cur !== '' && Number(t2cur) < baseline.t2);
   function setEl(id, val) { var el = document.getElementById(id); if (el) el.textContent = val; }
-  setEl('musage-' + apt, belowPrevious ? '⚠ Below previous reading' : ('T1 ' + fmt(calc.kwhDay) + ' · T2 ' + fmt(calc.kwhNight)));
-  setEl('mtotal-'     + apt, calc.amdTotal ? fmt(calc.amdTotal) + ' \u058F' : '-');
+  setEl('musage-' + apt, belowPrevious ? '⚠ Below previous reading' : ('T1 ' + fmt(calc.kwhDay) + ' · T2 ' + fmt(calc.kwhNight) + ' kWh'));
+  setEl('mtotal-'     + apt, calc.amdTotal ? fmt(calc.amdTotal) + ' \u058F' : '—');
   if (t1Input) t1Input.classList.add('dirty');
   if (t2Input) t2Input.classList.add('dirty');
+  updateMeterSummary();
 }
 
 function saveSingleMeter(apt) {
@@ -3190,7 +3325,7 @@ function saveAllMeters() {
     }); });
   });
   chain.then(function() {
-    if (btn) { btn.textContent = 'Save all'; btn.disabled = false; }
+    if (btn) { btn.textContent = 'Save entered'; btn.disabled = false; }
     renderMeterPanel();
     toast('\u2713 Saved ' + savedCount + (failedCount ? ' · failed ' + failedCount : ''), failedCount ? 'error' : 'success');
   });
