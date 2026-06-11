@@ -1204,11 +1204,11 @@ canvas#reportChart { width: 100%; height: 130px; border-radius: 8px; }
   <!-- Stats -->
   <div id="statsGrid" class="stats-grid"></div>
 
-  <!-- Progress bars -->
-  <div id="progPanel" class="prog-panel" style="display:none"></div>
+  <!-- Progress bars (hidden) -->
+  <div id="progPanel" class="prog-panel" style="display:none !important"></div>
 
-  <!-- Canvas chart -->
-  <div id="chartPanel" class="chart-panel" style="display:none">
+  <!-- Canvas chart (hidden) -->
+  <div id="chartPanel" class="chart-panel" style="display:none !important">
     <div class="chart-title">
       <span>💰 Ֆինանսական ամփոփ</span>
       <span id="chartPct" style="color:var(--sage);font-weight:900"></span>
@@ -1923,7 +1923,8 @@ function shareReport() {
 ═══════════════════════════════════════════════ */
 function renderChart() {
   var panel = document.getElementById('chartPanel');
-  panel.style.display = '';
+  panel.style.display = 'none';
+  return;
   var f = calcFinancials();
   var canvas = document.getElementById('reportChart');
   var dpr = window.devicePixelRatio || 1;
@@ -2719,11 +2720,8 @@ function render() {
 
   // Progress bars
   var prog = document.getElementById('progPanel');
-  prog.style.display = '';
-  prog.innerHTML =
-    progRow('⚡ Էլ. ' + ep + '% · ' + ePaid.length + '/' + eAll.length, ep, 'pf-blue') +
-    progRow('📶 Net ' + np + '% · ' + netPaid.length + '/' + netAll.length, np, 'pf-purple') +
-    progRow('🏢 Վ. ' + rp + '% · ' + (f.rentCollected ? Math.round(f.rentCollected/f.rentTotal*100) : 0) + '%', rp, 'pf-green');
+  prog.style.display = 'none';
+  prog.innerHTML = '';
 
   // Update report if open
   if (reportOpen) renderReportBody();
