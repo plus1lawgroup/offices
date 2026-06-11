@@ -131,7 +131,7 @@ body.offline { padding-top: 37px; }
    HEADER
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .header {
-  position: sticky; top: env(safe-area-inset-top, 0); z-index: 50;
+  position: relative; z-index: 2;
   height: var(--header-h);
   background: linear-gradient(105deg, #08182b 0%, #0b2940 62%, #0f766e 140%);
   padding: 0 max(16px, env(safe-area-inset-left)) 0 max(16px, env(safe-area-inset-left));
@@ -194,12 +194,11 @@ body.offline { padding-top: 37px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   STICKY CONTROLS
+   TOP CONTROLS
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .sticky-zone {
-  position: sticky;
-  top: var(--header-h);
-  z-index: 40;
+  position: relative;
+  z-index: 1;
   background: rgba(237,243,249,.95);
   backdrop-filter: blur(20px) saturate(160%);
   -webkit-backdrop-filter: blur(20px) saturate(160%);
