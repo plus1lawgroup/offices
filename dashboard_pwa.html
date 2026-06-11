@@ -76,6 +76,8 @@
 
   /* Layout */
   --header-h:  68px;
+  --page-max:  1160px;
+  --page-gutter: clamp(14px, 3vw, 24px);
   --radius-sm: 10px;
   --radius:    16px;
   --radius-lg: 22px;
@@ -134,9 +136,14 @@ body.offline { padding-top: 37px; }
   position: relative; z-index: 1;
   height: var(--header-h);
   background: linear-gradient(105deg, #08182b 0%, #0b2940 62%, #0f766e 140%);
-  padding: 0 max(16px, env(safe-area-inset-left)) 0 max(16px, env(safe-area-inset-left));
-  display: flex; align-items: center; gap: 12px;
   box-shadow: 0 1px 0 rgba(45,212,191,.18), 0 6px 24px rgba(4,18,35,.28);
+}
+.header-inner {
+  width: 100%; max-width: var(--page-max); height: 100%;
+  margin: 0 auto;
+  padding-left: max(var(--page-gutter), env(safe-area-inset-left));
+  padding-right: max(var(--page-gutter), env(safe-area-inset-right));
+  display: flex; align-items: center; gap: 12px;
 }
 /* Gold accent line under header */
 .header::after {
@@ -204,11 +211,21 @@ body.offline { padding-top: 37px; }
   -webkit-backdrop-filter: blur(20px) saturate(160%);
   border-bottom: 1px solid var(--border);
   box-shadow: 0 4px 20px rgba(15,35,55,.07);
-  padding: 10px 14px 0;
+}
+.sticky-inner {
+  width: 100%; max-width: var(--page-max);
+  margin: 0 auto;
+  padding: 12px var(--page-gutter) 0;
+}
+.control-row {
+  display: grid;
+  grid-template-columns: minmax(260px, .9fr) minmax(320px, 1.35fr);
+  gap: 10px;
+  align-items: stretch;
 }
 .month-row {
   display: flex; align-items: center; gap: 8px;
-  margin-bottom: 8px;
+  min-height: 46px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -230,9 +247,9 @@ body.offline { padding-top: 37px; }
   border: 1px solid rgba(37,99,235,.18);
   white-space: nowrap; flex-shrink: 0;
 }
-.search-wrap { position: relative; margin-bottom: 8px; }
+.search-wrap { position: relative; }
 .search-wrap input {
-  width: 100%; height: 44px;
+  width: 100%; height: 46px;
   padding: 0 40px 0 16px;
   border-radius: var(--radius-sm);
   border: 1.5px solid var(--border);
@@ -254,8 +271,8 @@ body.offline { padding-top: 37px; }
 }
 .search-clear.visible { display: block; }
 .filter-chips {
-  display: flex; gap: 6px;
-  overflow-x: auto; padding-bottom: 10px;
+  display: flex; gap: 7px;
+  overflow-x: auto; padding: 10px 1px 11px;
   scrollbar-width: none;
 }
 .filter-chips::-webkit-scrollbar { display: none; }
@@ -313,8 +330,8 @@ body.offline { padding-top: 37px; }
    MAIN WRAP
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .wrap {
-  max-width: 1160px; margin: 0 auto;
-  padding: 16px clamp(12px, 3vw, 24px) 40px;
+  width: 100%; max-width: var(--page-max); margin: 0 auto;
+  padding: 18px var(--page-gutter) 40px;
 }
 
 /* ── Pull-to-refresh ── */
@@ -336,7 +353,8 @@ body.offline { padding-top: 37px; }
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 14px 16px;
+  min-height: 112px;
+  padding: 16px 18px;
   box-shadow: var(--sh-sm);
   position: relative; overflow: hidden;
   transition: transform .15s;
@@ -1201,6 +1219,9 @@ canvas#reportChart { width: 100%; height: 130px; border-radius: 8px; }
   .electricity-summary { padding: 15px 16px; }
   .electricity-grid { grid-template-columns: 1fr; }
 }
+@media (max-width: 760px) {
+  .control-row { grid-template-columns: 1fr; gap: 8px; }
+}
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    RESPONSIVE
@@ -1233,13 +1254,13 @@ canvas#reportChart { width: 100%; height: 130px; border-radius: 8px; }
   #list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 @media (max-width: 420px) {
-  :root { --header-h: 62px; }
-  .header { padding-left: 12px; padding-right: 12px; }
+  :root { --header-h: 62px; --page-gutter: 10px; }
   .header-logo { width: 38px; height: 38px; }
   .header-title { font-size: 15px; }
   .header-add-btn { font-size: 11px; padding: 7px 10px; }
-  .sticky-zone { padding-left: 10px; padding-right: 10px; }
-  .wrap { padding: 12px 10px 28px; }
+  .sticky-inner { padding-top: 10px; }
+  .wrap { padding-top: 12px; padding-bottom: 28px; }
+  .stat-card { min-height: 104px; padding: 14px; }
   .card-top { padding: 12px 12px 10px; }
   .card-actions { padding: 8px 10px 10px; gap: 6px; }
   .action-btn { min-height: 42px; font-size: 10px; padding: 7px 5px; }
@@ -1260,6 +1281,7 @@ canvas#reportChart { width: 100%; height: 130px; border-radius: 8px; }
 
 <!-- Header -->
 <div class="header">
+  <div class="header-inner">
   <img class="header-logo" src="icon.png" alt="Plus One" onerror="this.style.display='none'">
   <div class="header-title">
     Գրասենյակներ
@@ -1270,10 +1292,13 @@ canvas#reportChart { width: 100%; height: 130px; border-radius: 8px; }
     <span class="sync-spin" id="syncSpinner">⟳</span>
     <span id="syncText">Բեռն...</span>
   </button>
+  </div>
 </div>
 
 <!-- Sticky controls -->
 <div class="sticky-zone">
+  <div class="sticky-inner">
+  <div class="control-row">
   <div class="month-row">
     <label>🏢</label>
     <select id="monthSel"></select>
@@ -1283,6 +1308,7 @@ canvas#reportChart { width: 100%; height: 130px; border-radius: 8px; }
   <div class="search-wrap">
     <input type="text" id="search" placeholder="🔍 Գրս., անուն, հեռ...." autocomplete="off" autocorrect="off">
     <button class="search-clear" id="searchClear" onclick="clearSearch()">✕</button>
+  </div>
   </div>
   <div class="filter-chips">
     <button class="chip active" data-tab="all">Բոլորը</button>
@@ -1300,6 +1326,7 @@ canvas#reportChart { width: 100%; height: 130px; border-radius: 8px; }
       <span id="paidToggleLabel">Ցույց տալ վճ.</span>
       <span class="paid-count-badge" id="paidCountBadge">0</span>
     </button>
+  </div>
   </div>
 </div>
 
