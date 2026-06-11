@@ -43,6 +43,7 @@ function doGet(e) {
     if (action === 'getAll')        return json(e, { ok: true, data: getPayments_() });
     if (action === 'update')        return json(e, updatePayment_(e.parameter));
     if (action === 'saveMeter')     return json(e, saveMeter_(e.parameter));
+    if (action === 'repairMeterHistory') return json(e, repairMeterHistory_(e.parameter));
     if (action === 'deletePayment') return json(e, deletePayment_(e.parameter));
     if (action === 'updateTenant')  return json(e, updateTenant_(e.parameter));
     if (action === 'test')          return json(e, runTest_());
@@ -448,6 +449,83 @@ function findPreviousMeter_(sh, map, apt, targetMonth) {
 }
 
 // â”€â”€ PAYMENTS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function repairMeterHistory_(p) {
+  if (String(p.key || '') !== 'plusone-april-may-2026') {
+    throw new Error('Invalid repair key');
+  }
+
+  // Office, Serial, March T1/T2, April T1/T2, May T1/T2.
+  const source = [
+    [201,1085286,1061,10,1214,16,1261,19],[301,1084580,4070,410,4111,411,4117,419],
+    [302,1086975,2397,171,2401,171,2403,171],[303,1086331,1031,2,1053,2,1055,2],
+    [304,1086325,3872,2872,3903,2954,3926,2981],[305,1086415,3702,343,3702,343,3702,343],
+    [306,1086322,1303,27,1303,28,1304,28],[502,1086923,4226,351,4514,381,4614,406],
+    [503,1087994,4543,739,4543,739,4550,740],[505,1085654,1138,727,1162,766,1175,770],
+    [803,1086959,3331,765,3331,765,3340,765],[804,1086312,3419,1067,3419,1067,3443,1071],
+    [901,1087350,724,8,741,8,745,8],[1001,1081001,1304,401,1342,414,1365,422],
+    [1101,1084505,107,24,123,24,129,24],[1102,1084381,700,71,704,72,704,73],
+    [1103,1085680,789,418,831,438,853,446],[1104,1084954,275,2,317,7,332,9],
+    [1105,1086181,31,0,63,0,64,0],[1106,1085779,131,5,174,8,187,12],
+    [1107,1086213,274,73,311,74,323,74],[1108,1086517,712,30,815,33,838,34],
+    [1109,1085226,11,1,12,1,15,2],[1110,1086855,529,20,604,19,621,19],
+    [1111,1086161,0,0,8,2,10,3],[1112,1085910,534,100,603,130,610,133],
+    [1113,1087114,0,0,183,0,189,1],[1114,1085214,0,0,54,7,75,12],
+    [1202,1086488,0,0,0,0,10,7],[1203,1085967,0,0,52,48,66,65],
+    [1204,1086198,604,355,641,393,658,405],[1205,1085232,319,224,447,303,466,319],
+    [1301,1085468,2139,168,2250,169,2318,175],[1302,1085666,2113,423,2279,478,2325,507],
+    [1601,1086191,2458,754,2797,919,2893,988],[1602,1086372,371,31,385,33,388,33],
+    [1603,1084133,3694,292,3772,296,3793,298]
+  ];
+
+  const sh = meterSheet_();
+  const headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+  const map = headerMap_(headers);
+  const existing = sh.getLastRow() < 2 ? [] :
+    sh.getRange(2, 1, sh.getLastRow() - 1, sh.getLastColumn()).getValues();
+  const keep = existing.filter(row => {
+    const month = String(first_(row, map, ['Month'], '')).trim();
+    return month !== 'Ապրիլ-2026' && month !== 'Մայիս-2026';
+  });
+
+  function makeRow(item, month, previousMonth, prevT1, prevT2, curT1, curT2, assumed) {
+    const row = new Array(headers.length).fill('');
+    const set = (name, value) => {
+      const index = map[norm_(name)];
+      if (index !== undefined) row[index] = value;
+    };
+    const kwhDay = curT1 - prevT1;
+    const kwhNight = curT2 - prevT2;
+    const amdDay = Math.round(kwhDay * AMD_PER_KWH_DAY);
+    const amdNight = Math.round(kwhNight * AMD_PER_KWH_NIGHT);
+    set('Office', item[0]); set('Serial', item[1]);
+    set('TotalPrevious', prevT1 + prevT2);
+    set('T1prev', prevT1); set('T2prev', prevT2);
+    set('T1current', curT1); set('T2current', curT2);
+    set('KwhDay', kwhDay); set('KwhNight', kwhNight);
+    set('AMDDay', amdDay); set('AMDNight', amdNight);
+    set('AMDTotal', amdDay + amdNight); set('Month', month);
+    set('PreviousMonth', previousMonth);
+    set('PreviousAssumed', assumed ? 'yes' : 'no');
+    set('EnteredAt', new Date());
+    return row;
+  }
+
+  const repaired = [];
+  source.forEach(item => {
+    repaired.push(makeRow(item, 'Ապրիլ-2026', 'Մարտ-2026',
+      item[2], item[3], item[4], item[5], true));
+    repaired.push(makeRow(item, 'Մայիս-2026', 'Ապրիլ-2026',
+      item[4], item[5], item[6], item[7], false));
+  });
+
+  if (existing.length) {
+    sh.getRange(2, 1, existing.length, headers.length).clearContent();
+  }
+  const output = keep.concat(repaired);
+  if (output.length) sh.getRange(2, 1, output.length, headers.length).setValues(output);
+  return { ok: true, repaired: repaired.length, april: source.length, may: source.length };
+}
+
 function paymentsSheet_() {
   const sh = getSheet_(SHEETS.PAYMENTS, true);
   // Auto-add any missing headers
