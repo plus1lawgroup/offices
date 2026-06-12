@@ -505,6 +505,23 @@ canvas#reportChart { width: 100%; height: 130px; border-radius: 8px; }
   padding: 2px 8px; border-radius: 999px;
 }
 .day-grp.today-grp .day-grp-badge { background: var(--unpaid-l); color: var(--unpaid); }
+.today-date-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 20px;
+  background: linear-gradient(#f87171 0 26%, #f8fafc 26% 100%);
+  border: 1px solid rgba(15,23,42,.18);
+  color: var(--ink);
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+  padding-top: 3px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.75);
+}
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    CARDS  ← SIGNATURE ELEMENT
@@ -1315,7 +1332,7 @@ canvas#reportChart { width: 100%; height: 130px; border-radius: 8px; }
     <button class="chip" data-tab="unpaid">✗ Չվճ.</button>
     <button class="chip" data-tab="rent">🏢 Վարձ</button>
     <button class="chip" data-tab="elec">⚡ Էլ.</button>
-    <button class="chip" data-tab="today">📅 Այսօր</button>
+    <button class="chip" data-tab="today"><span class="today-date-icon" id="todayDateIcon"></span> Այսօր</button>
     <button class="chip" data-tab="deposit">⟳ Դեպ.</button>
     <button class="chip" data-tab="internet">📶 Net</button>
     <button class="chip" data-tab="meter">⚡ Electricity</button>
@@ -1544,6 +1561,11 @@ var MONTH_NAMES = [
   elecMonth = MONTH_NAMES[_pi] + '-' + _py;
   meterMonth = elecMonth;
 })();
+
+function updateTodayDateIcon() {
+  var el = document.getElementById('todayDateIcon');
+  if (el) el.textContent = new Date().getDate();
+}
 
 function isRentCovered(status) {
   return status === 'paid' || status === 'deposit' || status === 'prepaid';
@@ -3362,6 +3384,7 @@ function saveAllMeters() {
 /* ═══════════════════════════════════════════════
    AUTO REFRESH
 ═══════════════════════════════════════════════ */
+updateTodayDateIcon();
 refreshAll();
 
 /* Refresh when user comes back to the tab/app — catches changes from other devices */
