@@ -2,7 +2,7 @@
     "name":  "Plus One Rent",
     "short_name":  "Plus One",
     "description":  "Plus One Law Group – Office Rent Dashboard",
-    "start_url":  "/offices/dashboard_pwa.html",
+    "start_url":  "/offices/index.html",
     "scope":  "/offices/",
     "display":  "standalone",
     "background_color":  "#edf3f9",
