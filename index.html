@@ -3,6 +3,25 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<script>
+/* ── SW KILL SWITCH ── runs before anything else ── */
+(function() {
+  if (!('serviceWorker' in navigator)) return;
+  // Nuke all caches immediately
+  if ('caches' in window) {
+    caches.keys().then(function(keys) {
+      keys.forEach(function(k) { caches.delete(k); });
+    });
+  }
+  // Unregister every SW registration except the current one
+  navigator.serviceWorker.getRegistrations().then(function(regs) {
+    regs.forEach(function(reg) {
+      // Force update — picks up new sw.js even if byte-identical check was cached
+      reg.update();
+    });
+  });
+})();
+</script>
 <meta name="theme-color" content="#08182b">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
