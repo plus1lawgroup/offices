@@ -1466,7 +1466,7 @@ canvas#reportChart { width: 100%; height: 130px; border-radius: 8px; }
 /* ═══════════════════════════════════════════════
    CONSTANTS & STATE
 ═══════════════════════════════════════════════ */
-var API = 'https://script.google.com/macros/s/AKfycbwqJsVtpTrorf4r-N9FFpaytAAP1ftN7P0uUyoScmKGDBPZoc-x1PJZunHgbgkTLGa2/exec';
+var API = 'https://script.google.com/macros/s/AKfycbxN__cD8D70j5T6VrWXzrR0HdS8mmjDLVybfOu5888XzwRGHbggZSFvk3I4CBiYd5FN/exec';
 
 /* JSONP helper — bypasses CORS for Google Apps Script */
 function jsonp(url) {
@@ -1495,7 +1495,39 @@ function jsonpRetry(url, attempts) {
     return jsonpRetry(url + (url.indexOf('?') === -1 ? '?' : '&') + '_retry=' + Date.now(), attempts - 1);
   });
 }
-var CACHE_KEY = 'plusone_cache_v3';
+
+function loadDataSnapshot() {
+  var stamp = Date.now();
+  return jsonpRetry(API + '?action=getSnapshot&_=' + stamp, 2).then(function(snapshot) {
+    if (!snapshot || !snapshot.ok || !Array.isArray(snapshot.tenants) ||
+        !snapshot.electricity || typeof snapshot.electricity !== 'object' ||
+        !snapshot.data || typeof snapshot.data !== 'object') {
+      throw new Error((snapshot && snapshot.error) || 'Snapshot unavailable');
+    }
+    return snapshot;
+  }).catch(function() {
+    // Compatibility until the Apps Script deployment includes getSnapshot.
+    // Requests are sequential to avoid Android dropping parallel JSONP scripts.
+    var result = { ok: true, generatedAt: new Date().toISOString() };
+    return jsonpRetry(API + '?action=getTenants&_=' + stamp, 3)
+      .then(function(t) {
+        if (!t || !t.ok || !Array.isArray(t.tenants)) throw new Error('Tenant sync failed');
+        result.tenants = t.tenants;
+        return jsonpRetry(API + '?action=getElectricity&_=' + stamp, 3);
+      })
+      .then(function(e) {
+        if (!e || !e.ok || !e.electricity) throw new Error('Electricity sync failed');
+        result.electricity = e.electricity;
+        return jsonpRetry(API + '?action=getAll&_=' + stamp, 3);
+      })
+      .then(function(p) {
+        if (!p || !p.ok || !p.data) throw new Error('Payment sync failed');
+        result.data = p.data;
+        return result;
+      });
+  });
+}
+var CACHE_KEY = 'plusone_snapshot_v4';
 var curMonth = 'Հունիս-2026';  // rent = current ongoing month
 var elecMonth = '';             // electricity = previous month (auto-set on load)
 var meterMonth = '';            // month currently being entered in the meter tab
@@ -1509,6 +1541,7 @@ var modalMode = 'edit';
 var availableMonths = [];
 var isOnline = navigator.onLine;
 var lastSyncTime = null;
+var syncInFlight = false;
 var reportOpen = false;
 var longPressTimer = null;
 var showPaid = false;  // hide fully-paid cards by default
@@ -1863,6 +1896,8 @@ function applyData(tJson, eJson, pJson) {
 }
 
 function refreshAll() {
+  if (syncInFlight) return;
+  syncInFlight = true;
   setSyncState('loading');
   showSkeletons();
 
@@ -1874,35 +1909,27 @@ function refreshAll() {
       toast('📦 Կեշ', 'success');
     }
     setSyncState('err');
+    syncInFlight = false;
     return;
   }
 
-  var requestStamp = Date.now();
-  var p1 = jsonpRetry(API + '?action=getTenants&_=' + requestStamp, 2);
-  var p2 = jsonpRetry(API + '?action=getElectricity&_=' + requestStamp, 2);
-  var p3 = jsonpRetry(API + '?action=getAll&_=' + requestStamp, 2);
-
-  Promise.allSettled([p1, p2, p3]).then(function(results) {
-    var cached = loadCache();
-    var cachedData = cached && cached.data ? cached.data : {};
-    var tJson = results[0].status === 'fulfilled' ? results[0].value : cachedData.t;
-    var eJson = results[1].status === 'fulfilled' ? results[1].value : cachedData.e;
-    var pJson = results[2].status === 'fulfilled' ? results[2].value : cachedData.p;
-    var failedCount = results.filter(function(result) { return result.status === 'rejected'; }).length;
-
-    if (!tJson || !tJson.ok || !Array.isArray(tJson.tenants)) {
-      throw new Error((tJson && tJson.error) || 'Tenant data request failed');
+  loadDataSnapshot().then(function(snapshot) {
+    if (!snapshot || !snapshot.ok || !Array.isArray(snapshot.tenants) ||
+        !snapshot.electricity || typeof snapshot.electricity !== 'object' ||
+        !snapshot.data || typeof snapshot.data !== 'object') {
+      throw new Error((snapshot && snapshot.error) || 'Incomplete data snapshot');
     }
 
+    var tJson = { ok: true, tenants: snapshot.tenants };
+    var eJson = { ok: true, electricity: snapshot.electricity };
+    var pJson = { ok: true, data: snapshot.data };
     applyData(tJson, eJson, pJson);
-    saveCache({ t: tJson, e: eJson, p: pJson });
+    saveCache({ t: tJson, e: eJson, p: pJson, generatedAt: snapshot.generatedAt || '' });
     lastSyncTime = Date.now();
-    setSyncState(failedCount ? 'err' : 'ok');
+    setSyncState('ok');
     render();
     renderChart();
-    if (failedCount) {
-      toast('Tenant data loaded; ' + failedCount + ' other request(s) failed', 'error');
-    }
+    syncInFlight = false;
   }).catch(function(err) {
     console.error(err);
     setSyncState('err');
@@ -1910,25 +1937,39 @@ function refreshAll() {
     if (c) {
       applyData(c.data.t, c.data.e, c.data.p);
       render();
-      toast('📦 Կեշ — ցանց չկա', 'error');
+      var cachedAt = c.ts ? formatDateTime(new Date(c.ts).toISOString()) : '';
+      toast('📦 Offline data' + (cachedAt ? ' · ' + cachedAt : ''), 'error');
     } else {
       document.getElementById('list').innerHTML = '<div class="empty"><div class="empty-icon">📵</div>Ցանցը անջատ է</div>';
     }
+    syncInFlight = false;
   });
 }
 
 function reloadForMonth() {
+  if (syncInFlight) return;
+  syncInFlight = true;
   setSyncState('loading');
-  if (!isOnline) { render(); setSyncState('err'); return; }
-  var p1 = jsonpRetry(API + '?action=getElectricity', 2);
-  var p2 = jsonpRetry(API + '?action=getAll', 2);
-  Promise.all([p1, p2]).then(function(res) {
-    applyData(null, res[0], res[1]);
+  if (!isOnline) { render(); setSyncState('err'); syncInFlight = false; return; }
+  loadDataSnapshot().then(function(snapshot) {
+    if (!snapshot || !snapshot.ok || !Array.isArray(snapshot.tenants) ||
+        !snapshot.electricity || !snapshot.data) throw new Error('Incomplete data snapshot');
+    var tJson = { ok: true, tenants: snapshot.tenants };
+    var eJson = { ok: true, electricity: snapshot.electricity };
+    var pJson = { ok: true, data: snapshot.data };
+    applyData(tJson, eJson, pJson);
+    saveCache({ t: tJson, e: eJson, p: pJson, generatedAt: snapshot.generatedAt || '' });
     lastSyncTime = Date.now();
     setSyncState('ok');
     render();
     renderChart();
-  }).catch(function() { setSyncState('err'); });
+    syncInFlight = false;
+  }).catch(function() {
+    setSyncState('err');
+    toast('Sync failed · showing unchanged data', 'error');
+    render();
+    syncInFlight = false;
+  });
 }
 
 function showSkeletons() {

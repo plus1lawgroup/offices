@@ -41,6 +41,13 @@ function doGet(e) {
     if (action === 'getTenants')    return json(e, { ok: true, tenants: getTenants_() });
     if (action === 'getElectricity') return json(e, { ok: true, electricity: getElectricity_() });
     if (action === 'getAll')        return json(e, { ok: true, data: getPayments_() });
+    if (action === 'getSnapshot')   return json(e, {
+      ok: true,
+      tenants: getTenants_(),
+      electricity: getElectricity_(),
+      data: getPayments_(),
+      generatedAt: new Date().toISOString()
+    });
     if (action === 'update')        return json(e, updatePayment_(e.parameter));
     if (action === 'saveMeter')     return json(e, saveMeter_(e.parameter));
     if (action === 'repairMeterHistory') return json(e, repairMeterHistory_(e.parameter));
