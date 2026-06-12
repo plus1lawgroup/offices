@@ -1263,9 +1263,10 @@ canvas#reportChart { width: 100%; height: 130px; border-radius: 8px; }
     grid-column: 1 / -1;
     display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
+    align-items: start;
   }
   #list .day-grp { grid-column: 1 / -1; }
-  #list .card    { margin-bottom: 0; }
+  #list .card    { margin-bottom: 0; align-self: start; }
 }
 @media (min-width: 1380px) {
   #list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -3020,7 +3021,15 @@ function render() {
     if (toggle) {
       toggle.addEventListener('click', function() {
         var body = document.getElementById(this.dataset.id);
-        var open = body.classList.toggle('open');
+        var wasOpen = body.classList.contains('open');
+        document.querySelectorAll('.msg-body.open').forEach(function(openBody) {
+          openBody.classList.remove('open');
+        });
+        document.querySelectorAll('.msg-toggle').forEach(function(openToggle) {
+          openToggle.textContent = 'Հաղ. ▾';
+        });
+        var open = !wasOpen;
+        if (open) body.classList.add('open');
         this.textContent = open ? 'Հաղ. ▴' : 'Հաղ. ▾';
       });
     }
