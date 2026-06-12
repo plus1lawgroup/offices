@@ -1474,7 +1474,7 @@ function jsonp(url) {
     var script = document.createElement('script');
     var timer = setTimeout(function() {
       cleanup(); reject(new Error('JSONP timeout'));
-    }, 15000);
+    }, 45000);
     function cleanup() {
       clearTimeout(timer);
       delete window[cbName];
@@ -1484,6 +1484,14 @@ function jsonp(url) {
     script.onerror = function() { cleanup(); reject(new Error('JSONP error')); };
     script.src = url + (url.indexOf('?') === -1 ? '?' : '&') + 'callback=' + cbName;
     document.head.appendChild(script);
+  });
+}
+
+function jsonpRetry(url, attempts) {
+  attempts = attempts || 2;
+  return jsonp(url).catch(function(err) {
+    if (attempts <= 1) throw err;
+    return jsonpRetry(url + (url.indexOf('?') === -1 ? '?' : '&') + '_retry=' + Date.now(), attempts - 1);
   });
 }
 var CACHE_KEY = 'plusone_cache_v3';
@@ -1869,9 +1877,9 @@ function refreshAll() {
   }
 
   var requestStamp = Date.now();
-  var p1 = jsonp(API + '?action=getTenants&_=' + requestStamp);
-  var p2 = jsonp(API + '?action=getElectricity&_=' + requestStamp);
-  var p3 = jsonp(API + '?action=getAll&_=' + requestStamp);
+  var p1 = jsonpRetry(API + '?action=getTenants&_=' + requestStamp, 2);
+  var p2 = jsonpRetry(API + '?action=getElectricity&_=' + requestStamp, 2);
+  var p3 = jsonpRetry(API + '?action=getAll&_=' + requestStamp, 2);
 
   Promise.allSettled([p1, p2, p3]).then(function(results) {
     var cached = loadCache();
@@ -1911,8 +1919,8 @@ function refreshAll() {
 function reloadForMonth() {
   setSyncState('loading');
   if (!isOnline) { render(); setSyncState('err'); return; }
-  var p1 = jsonp(API + '?action=getElectricity');
-  var p2 = jsonp(API + '?action=getAll');
+  var p1 = jsonpRetry(API + '?action=getElectricity', 2);
+  var p2 = jsonpRetry(API + '?action=getAll', 2);
   Promise.all([p1, p2]).then(function(res) {
     applyData(null, res[0], res[1]);
     lastSyncTime = Date.now();
@@ -2190,7 +2198,7 @@ function savePayment(apt, tenantName, type, status, prevStatus) {
     '&clearRentPaidAt=' + encodeURIComponent(clearPaidAt) +
     '&clearElecPaidAt=' + encodeURIComponent(clearElecPaid);
 
-  jsonp(url).then(function(json) {
+  jsonpRetry(url, 2).then(function(json) {
     if (json.ok) {
       var key = paymentKey(saveMonth, apt);
       paymentsData[key] = Object.assign({}, paymentsData[key] || {}, {
@@ -2268,7 +2276,7 @@ function savePrepayment(apt, tenantName) {
     '&totalPaid=' + rentAmt +
     '&rentPaidAt=' + encodeURIComponent(paidAt);
 
-  jsonp(url).then(function(json) {
+  jsonpRetry(url, 2).then(function(json) {
     if (!json.ok) throw new Error(json.error || 'Save failed');
     setSyncState('ok');
   }).catch(function() {
@@ -2311,7 +2319,7 @@ function deletePrepayment(apt, tenantName) {
     '&totalPaid=0' +
     '&clearRentPaidAt=1';
 
-  jsonp(url).then(function(json) {
+  jsonpRetry(url, 2).then(function(json) {
     if (!json.ok) throw new Error(json.error || 'Delete failed');
     paymentsData[paymentKey(targetMonth, apt)] = Object.assign({}, existing, {
       rentStatus: '', rentPaidAmount: 0, totalPaid: 0, rentPaidAt: ''
@@ -2366,7 +2374,7 @@ function saveTenant(apt, fields) {
     '&startDate=' + encodeURIComponent(fields.startDate || '') +
     '&endDate=' + encodeURIComponent(fields.endDate || '') +
     '&paymentDate=' + encodeURIComponent(fields.paymentDate || '');
-  return jsonp(url).then(function(j) { return j.ok; }).catch(function() { return false; });
+  return jsonpRetry(url, 2).then(function(j) { return j.ok; }).catch(function() { return false; });
 }
 
 /* ═══════════════════════════════════════════════
@@ -2820,7 +2828,7 @@ function render() {
       toggleLabel.textContent = 'Թաքցնել վճ.';
     } else {
       toggleBtn.classList.remove('active');
-      toggleIcon.textContent  = '👁';
+      toggleIcon.textContent  = '';
       toggleLabel.textContent = 'Ցույց տալ վճ.';
     }
   } else {
@@ -2901,7 +2909,7 @@ function render() {
       lastDay = t.day;
       var dg = document.createElement('div');
       dg.className = 'day-grp' + (isToday ? ' today-grp' : '');
-      dg.innerHTML = '📅 ' + t.day + '-ին' +
+      dg.innerHTML = '<span class="today-date-icon">' + t.day + '</span> ' + t.day + '-ին' +
         (isToday ? ' <span class="day-grp-badge">Այսօր</span>' : '');
       el.appendChild(dg);
     }
@@ -3307,7 +3315,7 @@ function saveSingleMeter(apt) {
     '&apt=' + encodeURIComponent(apt) + '&month=' + encodeURIComponent(month) +
     '&t1current=' + t1cur + '&t2current=' + t2cur +
     '&internet=' + (t.internet ? 'yes' : 'no');
-  jsonp(url).then(function(res) {
+  jsonpRetry(url, 2).then(function(res) {
     if (btn) { btn.textContent = 'Save'; btn.classList.remove('saving'); }
     if (res && res.ok) {
       elecMap[month + '_' + apt] = {
@@ -3354,7 +3362,7 @@ function saveAllMeters() {
         '&apt=' + encodeURIComponent(t.apt) + '&month=' + encodeURIComponent(month) +
         '&t1current=' + t1cur + '&t2current=' + t2cur +
         '&internet=' + (t.internet ? 'yes' : 'no');
-      jsonp(url).then(function(r) {
+      jsonpRetry(url, 2).then(function(r) {
         if (r && r.ok) {
           elecMap[month + '_' + t.apt] = {
             apt: t.apt, month: month, serial: r.serial || '',
