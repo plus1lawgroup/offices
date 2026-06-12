@@ -3577,16 +3577,12 @@ setInterval(function() {
 }, 30000);
 
 /* ═══════════════════════════════════════════════
-   SERVICE WORKER (single registration)
+   SERVICE WORKER — unregister any existing SW
+   No SW = no cache interception = same speed as incognito
 ═══════════════════════════════════════════════ */
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function() {
-    navigator.serviceWorker.register('/offices/sw.js', { scope: '/offices/' })
-      .then(function(r) {
-        r.update();
-        console.log('SW ok:', r.scope);
-      })
-      .catch(function(e) { console.warn('SW fail:', e); });
+  navigator.serviceWorker.getRegistrations().then(function(regs) {
+    regs.forEach(function(reg) { reg.unregister(); });
   });
 }
 </script>
