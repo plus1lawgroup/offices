@@ -1263,11 +1263,15 @@ body.notification-open { overflow: hidden; touch-action: none; }
   display: flex; justify-content: space-between; align-items: flex-start;
   gap: 12px; padding: 16px 16px 10px;
 }
+.electricity-office-label {
+  font-size: 9px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--sage); margin-bottom: 1px;
+}
 .electricity-office {
-  font-size: 18px; font-weight: 950; letter-spacing: -.025em; color: var(--ink);
+  font-size: 22px; font-weight: 950; letter-spacing: -.03em; color: var(--ink); line-height: 1;
 }
 .electricity-name {
-  margin-top: 2px; color: var(--ink-3); font-size: 11px; font-weight: 700;
+  margin-top: 3px; color: var(--ink-3); font-size: 11px; font-weight: 700;
   max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .electricity-context {
@@ -1304,14 +1308,18 @@ body.notification-open { overflow: hidden; touch-action: none; }
   gap: 12px; padding: 12px 16px;
   border-top: 1px solid var(--border); background: var(--surface-2);
 }
-.electricity-result-label {
-  color: var(--ink-3); font-size: 10px; font-weight: 750;
-}
 .electricity-result-usage {
-  margin-top: 2px; color: var(--ink-2); font-size: 11px; font-weight: 800;
+  color: var(--ink-3); font-size: 11px; font-weight: 750; margin-bottom: 4px;
+}
+.electricity-result-total-row {
+  display: flex; align-items: baseline; gap: 6px;
+}
+.electricity-total-label {
+  font-size: 10px; font-weight: 800; letter-spacing: .05em;
+  text-transform: uppercase; color: var(--ink-3);
 }
 .electricity-result-total {
-  margin-top: 3px; color: var(--forest); font-size: 20px;
+  color: var(--forest); font-size: 22px;
   font-weight: 950; letter-spacing: -.035em; font-variant-numeric: tabular-nums;
 }
 .electricity-save {
@@ -1471,6 +1479,11 @@ body.notification-open { overflow: hidden; touch-action: none; }
     <div class="meter-header-row">
       <label class="meter-month-label" for="meterMonthSel">Electricity readings</label>
       <select id="meterMonthSel" class="meter-month-select" onchange="changeMeterMonth(this.value)"></select>
+      <select class="meter-month-select" onchange="meterSortBy=this.value;renderMeterPanel()" style="max-width:110px">
+        <option value="floor">Floor</option>
+        <option value="name">Name</option>
+        <option value="rent">Rent ↓</option>
+      </select>
       <button class="meter-save-all-btn" onclick="saveAllMeters()">Save entered</button>
     </div>
     <div class="electricity-summary">
@@ -1650,6 +1663,7 @@ var CACHE_KEY = 'plusone_snapshot_v4';
 var curMonth = 'Հունիս-2026';  // rent = current ongoing month
 var elecMonth = '';             // electricity = previous month (auto-set on load)
 var meterMonth = '';            // month currently being entered in the meter tab
+var meterSortBy = 'floor';      // default sort for electricity panel
 var tenants = [];
 var elecMap = {};
 var st = {};
@@ -3440,8 +3454,20 @@ function renderMeterPanel() {
     return;
   }
 
+  var sorted = tenants.slice().sort(function(a, b) {
+    if (meterSortBy === 'name') return (a.name||'').localeCompare(b.name||'', 'hy');
+    if (meterSortBy === 'rent') return b.rent - a.rent;
+    // floor sort (default)
+    var fa = aptFloor(a.apt), fb = aptFloor(b.apt);
+    if (fa === null && fb === null) return a.apt.localeCompare(b.apt);
+    if (fa === null) return 1;
+    if (fb === null) return -1;
+    if (fa !== fb) return parseInt(fa, 10) - parseInt(fb, 10);
+    return parseInt(a.apt.slice(-2), 10) - parseInt(b.apt.slice(-2), 10);
+  });
+
   var html = '<div class="electricity-grid">';
-  tenants.forEach(function(t) {
+  sorted.forEach(function(t) {
     var ex = meterReading(t.apt, meterMonth) || {};
     var draftKey = meterMonth + '_' + t.apt;
     var dr = meterDraft[draftKey] || {};
@@ -3453,12 +3479,12 @@ function renderMeterPanel() {
     var calc   = calcMeterAmounts(t1prev, t2prev, t1cur, t2cur);
     var hasSaved = ex.amdDay !== undefined || ex.t1current !== undefined;
     var serial = ex.serial || baseline.serial || '-';
-    var previous = 'T1 ' + fmt(t1prev) + ' · T2 ' + fmt(t2prev);
+    var previous = 'Day ' + fmt(t1prev) + ' · Night ' + fmt(t2prev);
 
     html +=
       '<article class="electricity-card" id="mrow-' + meterText(t.apt) + '">' +
         '<div class="electricity-card-head">' +
-          '<div><div class="electricity-office">' + meterText(t.apt) + '</div>' +
+          '<div><div class="electricity-office-label">Office</div><div class="electricity-office">' + meterText(t.apt) + '</div>' +
           '<div class="electricity-name">' + meterText(t.name || '-') + '</div></div>' +
           '<span class="meter-saved-badge' + (hasSaved ? ' show' : '') + '" id="mbadge-' + meterText(t.apt) + '">saved</span>' +
         '</div>' +
@@ -3467,17 +3493,18 @@ function renderMeterPanel() {
           '<span>Previous · ' + meterText(previous) + '</span>' +
         '</div>' +
         '<div class="electricity-inputs">' +
-          '<div class="electricity-field"><label>T1 day</label><input type="number" inputmode="decimal" step="0.01" min="' + meterText(t1prev) + '" value="' + meterText(meterValue(t1cur)) + '" id="mt1cur-' + meterText(t.apt) + '" oninput="meterInputChange(\'' + meterText(t.apt) + '\')"></div>' +
-          '<div class="electricity-field"><label>T2 night</label><input type="number" inputmode="decimal" step="0.01" min="' + meterText(t2prev) + '" value="' + meterText(meterValue(t2cur)) + '" id="mt2cur-' + meterText(t.apt) + '" oninput="meterInputChange(\'' + meterText(t.apt) + '\')"></div>' +
+          '<div class="electricity-field"><label>Day tariff</label><input type="number" inputmode="decimal" step="0.01" min="' + meterText(t1prev) + '" value="' + meterText(meterValue(t1cur)) + '" id="mt1cur-' + meterText(t.apt) + '" oninput="meterInputChange(\x27' + meterText(t.apt) + '\x27)"></div>' +
+          '<div class="electricity-field"><label>Night tariff</label><input type="number" inputmode="decimal" step="0.01" min="' + meterText(t2prev) + '" value="' + meterText(meterValue(t2cur)) + '" id="mt2cur-' + meterText(t.apt) + '" oninput="meterInputChange(\x27' + meterText(t.apt) + '\x27)"></div>' +
         '</div>' +
         '<div class="electricity-card-foot">' +
-          '<div><div class="electricity-result-label">Usage</div>' +
-          '<div class="electricity-result-usage" id="musage-' + meterText(t.apt) + '">T1 ' + fmt(calc.kwhDay) + ' · T2 ' + fmt(calc.kwhNight) + ' kWh</div>' +
-          '<div class="electricity-result-total" id="mtotal-' + meterText(t.apt) + '">' + (calc.amdTotal ? fmt(calc.amdTotal) + ' \u058F' : '—') + '</div></div>' +
-          '<button class="electricity-save" id="msave-' + meterText(t.apt) + '" onclick="saveSingleMeter(\'' + meterText(t.apt) + '\')">Save</button>' +
+          '<div>' +
+            '<div class="electricity-result-usage" id="musage-' + meterText(t.apt) + '">Day ' + fmt(calc.kwhDay) + ' · Night ' + fmt(calc.kwhNight) + ' kWh</div>' +
+            '<div class="electricity-result-total-row"><span class="electricity-total-label">Total</span><span class="electricity-result-total" id="mtotal-' + meterText(t.apt) + '">' + (calc.amdTotal ? fmt(calc.amdTotal) + ' ֏' : '—') + '</span></div>' +
+          '</div>' +
+          '<button class="electricity-save" id="msave-' + meterText(t.apt) + '" onclick="saveSingleMeter(\x27' + meterText(t.apt) + '\x27)">Save</button>' +
         '</div>' +
       '</article>';
-  });
+        '</div>' +
   html += '</div>';
   container.innerHTML = html;
   updateMeterSummary();
@@ -3522,7 +3549,7 @@ function meterInputChange(apt) {
     (t1cur !== '' && Number(t1cur) < baseline.t1) ||
     (t2cur !== '' && Number(t2cur) < baseline.t2);
   function setEl(id, val) { var el = document.getElementById(id); if (el) el.textContent = val; }
-  setEl('musage-' + apt, belowPrevious ? '⚠ Below previous reading' : ('T1 ' + fmt(calc.kwhDay) + ' · T2 ' + fmt(calc.kwhNight) + ' kWh'));
+  setEl('musage-' + apt, belowPrevious ? '⚠ Below previous reading' : ('Day ' + fmt(calc.kwhDay) + ' · Night ' + fmt(calc.kwhNight) + ' kWh'));
   setEl('mtotal-'     + apt, calc.amdTotal ? fmt(calc.amdTotal) + ' \u058F' : '—');
   if (t1Input) t1Input.classList.add('dirty');
   if (t2Input) t2Input.classList.add('dirty');
