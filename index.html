@@ -1429,12 +1429,12 @@ body.notification-open { overflow: hidden; touch-action: none; }
   </div>
   </div>
   <div class="filter-chips">
-    <button class="chip active" data-tab="all">Բոլորը</button>
-    <button class="chip" data-tab="deposit">⟳ Դեպոզիտ</button>
+    <button class="chip active" data-tab="all">All</button>
+    <button class="chip" data-tab="deposit">⟳ Deposit</button>
     <button class="chip" data-tab="meter">⚡ Electricity</button>
     <button class="chip paid-toggle-chip" id="paidToggleBtn" onclick="toggleShowPaid()" style="display:none">
       <span id="paidToggleIcon"></span>
-      <span id="paidToggleLabel">Ցույց տալ վճ.</span>
+      <span id="paidToggleLabel">Show Paid</span>
       <span class="paid-count-badge" id="paidCountBadge">0</span>
     </button>
   </div>
@@ -1450,13 +1450,13 @@ body.notification-open { overflow: hidden; touch-action: none; }
 
   <!-- Sort -->
   <div class="sort-bar">
-    <span>Կարգ.</span>
+    <span>Sort</span>
     <select id="sortSel" onchange="render()">
-      <option value="day">Ամսաթիվ</option>
+      <option value="day">Date</option>
       <option value="floor">Floor</option>
-      <option value="name">Անուն</option>
-      <option value="rent">Վարձ ↓</option>
-      <option value="unpaid">Չվճ. ↓</option>
+      <option value="name">Name</option>
+      <option value="rent">Rent ↓</option>
+      <option value="unpaid">Unpaid ↓</option>
     </select>
   </div>
 
@@ -3035,11 +3035,11 @@ function render() {
     if (showPaid) {
       toggleBtn.classList.add('active');
       toggleIcon.textContent  = '✓ ';
-      toggleLabel.textContent = 'Թաքցնել վճ.';
+      toggleLabel.textContent = 'Hide Paid';
     } else {
       toggleBtn.classList.remove('active');
       toggleIcon.textContent  = '';
-      toggleLabel.textContent = 'Ցույց տալ վճ.';
+      toggleLabel.textContent = 'Show Paid';
     }
   } else {
     toggleBtn.style.display = 'none';
