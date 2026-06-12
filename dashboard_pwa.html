@@ -530,6 +530,9 @@ canvas#reportChart { width: 100%; height: 130px; border-radius: 8px; }
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .card {
   position: relative;
+  display: grid;
+  grid-template-rows: 164px 142px 42px;
+  height: 348px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
@@ -560,7 +563,10 @@ canvas#reportChart { width: 100%; height: 130px; border-radius: 8px; }
 /* These classes are toggled by JS via patchCard */
 .card[data-card]                         { --bar: var(--border-2); }
 
-.card-top { padding: 14px 16px 12px; display: flex; gap: 12px; cursor: pointer; }
+.card-top {
+  min-height: 0; overflow: hidden;
+  padding: 14px 16px 12px; display: flex; gap: 12px; cursor: pointer;
+}
 .card-left { flex: 1; min-width: 0; }
 .apt-label {
   font-size: 10px; font-weight: 900; letter-spacing: .07em;
@@ -634,7 +640,7 @@ canvas#reportChart { width: 100%; height: 130px; border-radius: 8px; }
 
 /* ── Paid-at table ── */
 .paid-at-table {
-  margin-top: 4px;
+  margin-top: 4px; min-height: 20px;
   display: flex; flex-direction: column; gap: 2px; align-items: flex-end;
 }
 .pa-row {
@@ -655,11 +661,14 @@ canvas#reportChart { width: 100%; height: 130px; border-radius: 8px; }
   padding: 10px 12px 12px;
   background: var(--surface-2);
   border-top: 1px solid var(--border);
-  display: flex; gap: 7px; flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: 58px 44px;
+  gap: 8px;
   align-items: stretch;
 }
 .action-btn {
-  flex: 1; min-width: 0;
+  min-width: 0;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 2px; padding: 9px 8px;
   border-radius: var(--radius-sm);
@@ -668,7 +677,7 @@ canvas#reportChart { width: 100%; height: 130px; border-radius: 8px; }
   color: var(--ink-2);
   font-size: 11px; font-weight: 800; line-height: 1.2;
   text-align: center; white-space: normal;
-  min-height: 46px;
+  min-height: 0; height: 58px;
   transition: transform .13s, box-shadow .13s, background .13s;
   box-shadow: var(--sh-xs);
 }
@@ -727,9 +736,12 @@ canvas#reportChart { width: 100%; height: 130px; border-radius: 8px; }
 .prepay-btn.is-saving { opacity: .65 !important; pointer-events: none !important; }
 
 /* Icon buttons */
-.quick-btns { display: flex; gap: 6px; flex: 1 0 100%; justify-content: flex-end; }
+.quick-btns {
+  grid-column: 1 / -1;
+  display: flex; gap: 7px; justify-content: flex-end; align-items: stretch;
+}
 .icon-btn {
-  padding: 9px 10px; border-radius: var(--radius-sm);
+  width: 46px; padding: 8px; border-radius: var(--radius-sm);
   border: 1.5px solid var(--border);
   background: var(--surface);
   color: var(--ink-2); font-size: 15px;
@@ -739,7 +751,7 @@ canvas#reportChart { width: 100%; height: 130px; border-radius: 8px; }
 .icon-btn:active { transform: scale(.88); }
 .icon-btn:hover  { box-shadow: var(--sh-sm); background: var(--surface-2); }
 .send-btn {
-  padding: 9px 11px; border-radius: var(--radius-sm); border: none;
+  width: 46px; padding: 8px; border-radius: var(--radius-sm); border: none;
   background: linear-gradient(135deg, #25d366, #1aaa50);
   color: #fff; font-size: 15px;
   box-shadow: 0 4px 14px rgba(37,211,102,.3);
@@ -749,7 +761,7 @@ canvas#reportChart { width: 100%; height: 130px; border-radius: 8px; }
 
 /* ── Message expand ── */
 .msg-toggle {
-  width: 100%; padding: 9px 16px;
+  width: 100%; height: 42px; padding: 0 16px;
   background: transparent; border: none;
   border-top: 1px solid var(--border);
   font-size: 11px; font-weight: 700; color: var(--ink-3);
@@ -758,15 +770,44 @@ canvas#reportChart { width: 100%; height: 130px; border-radius: 8px; }
 }
 .msg-toggle:hover { background: var(--surface-3); color: var(--ink-2); }
 .msg-body {
-  display: none; padding: 14px 16px;
-  border-top: 1px solid var(--border);
-  background: var(--surface-2);
-  animation: slideDown .18s ease;
+  display: none;
+  position: fixed; inset: 0; z-index: 500;
+  padding: max(18px, env(safe-area-inset-top)) 18px max(18px, env(safe-area-inset-bottom));
+  background: rgba(4,18,35,.58);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  align-items: center; justify-content: center;
+  animation: msgFade .18s ease;
 }
-@keyframes slideDown { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
-.msg-body.open { display: block; }
+@keyframes msgFade { from { opacity: 0; } to { opacity: 1; } }
+.msg-body.open { display: flex; }
+.msg-sheet {
+  width: min(100%, 620px); max-height: min(86vh, 760px);
+  overflow: auto; position: relative;
+  padding: 20px; border-radius: 24px;
+  background: var(--surface-2);
+  border: 1px solid rgba(255,255,255,.72);
+  box-shadow: 0 30px 90px rgba(4,18,35,.32);
+  animation: msgSheetIn .22s cubic-bezier(.2,.8,.3,1);
+}
+@keyframes msgSheetIn {
+  from { opacity: 0; transform: translateY(18px) scale(.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.msg-sheet-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; margin-bottom: 12px;
+}
+.msg-sheet-title {
+  font-size: 13px; font-weight: 900; color: var(--ink);
+}
+.msg-close {
+  width: 34px; height: 34px; border: 0; border-radius: 999px;
+  background: var(--surface-3); color: var(--ink-2);
+  font-size: 18px; line-height: 1;
+}
 .msg-text {
-  font-size: 11px; line-height: 1.75;
+  font-size: 12px; line-height: 1.72;
   white-space: pre-wrap; color: var(--ink);
   font-family: 'Menlo', 'Courier New', monospace;
   background: var(--surface);
@@ -1279,9 +1320,17 @@ canvas#reportChart { width: 100%; height: 130px; border-radius: 8px; }
   .sticky-inner { padding-top: 10px; }
   .wrap { padding-top: 12px; padding-bottom: 28px; }
   .stat-card { min-height: 104px; padding: 14px; }
+  .card {
+    grid-template-rows: 158px 136px 40px;
+    height: 334px;
+  }
   .card-top { padding: 12px 12px 10px; }
-  .card-actions { padding: 8px 10px 10px; gap: 6px; }
+  .card-actions {
+    padding: 8px 10px 10px; gap: 6px;
+    grid-template-rows: 56px 42px;
+  }
   .action-btn { min-height: 42px; font-size: 10px; padding: 7px 5px; }
+  .msg-sheet { padding: 16px; border-radius: 20px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -1498,34 +1547,25 @@ function jsonpRetry(url, attempts) {
 
 function loadDataSnapshot() {
   var stamp = Date.now();
-  return jsonpRetry(API + '?action=getSnapshot&_=' + stamp, 2).then(function(snapshot) {
-    if (!snapshot || !snapshot.ok || !Array.isArray(snapshot.tenants) ||
-        !snapshot.electricity || typeof snapshot.electricity !== 'object' ||
-        !snapshot.data || typeof snapshot.data !== 'object') {
-      throw new Error((snapshot && snapshot.error) || 'Snapshot unavailable');
-    }
-    return snapshot;
-  }).catch(function() {
-    // Compatibility until the Apps Script deployment includes getSnapshot.
-    // Requests are sequential to avoid Android dropping parallel JSONP scripts.
-    var result = { ok: true, generatedAt: new Date().toISOString() };
-    return jsonpRetry(API + '?action=getTenants&_=' + stamp, 3)
-      .then(function(t) {
-        if (!t || !t.ok || !Array.isArray(t.tenants)) throw new Error('Tenant sync failed');
-        result.tenants = t.tenants;
-        return jsonpRetry(API + '?action=getElectricity&_=' + stamp, 3);
-      })
-      .then(function(e) {
-        if (!e || !e.ok || !e.electricity) throw new Error('Electricity sync failed');
-        result.electricity = e.electricity;
-        return jsonpRetry(API + '?action=getAll&_=' + stamp, 3);
-      })
-      .then(function(p) {
-        if (!p || !p.ok || !p.data) throw new Error('Payment sync failed');
-        result.data = p.data;
-        return result;
-      });
-  });
+  // Keep requests small and sequential. Large combined JSONP responses were
+  // unreliable on Android and could leave a new device with an empty screen.
+  var result = { ok: true, generatedAt: new Date().toISOString() };
+  return jsonpRetry(API + '?action=getTenants&_=' + stamp, 3)
+    .then(function(t) {
+      if (!t || !t.ok || !Array.isArray(t.tenants)) throw new Error('Tenant sync failed');
+      result.tenants = t.tenants;
+      return jsonpRetry(API + '?action=getElectricity&_=' + stamp, 3);
+    })
+    .then(function(e) {
+      if (!e || !e.ok || !e.electricity) throw new Error('Electricity sync failed');
+      result.electricity = e.electricity;
+      return jsonpRetry(API + '?action=getAll&_=' + stamp, 3);
+    })
+    .then(function(p) {
+      if (!p || !p.ok || !p.data) throw new Error('Payment sync failed');
+      result.data = p.data;
+      return result;
+    });
 }
 var CACHE_KEY = 'plusone_snapshot_v4';
 var curMonth = 'Հունիս-2026';  // rent = current ongoing month
@@ -3014,8 +3054,14 @@ function render() {
       (hasE ?
         '<button class="msg-toggle" data-id="' + msgId + '">Հաղ. ▾</button>' +
         '<div class="msg-body" id="' + msgId + '">' +
-          '<div class="msg-text">' + makeMsg(t.apt).replace(/</g,'&lt;') + '</div>' +
-          '<button class="copy-msg-btn" data-copy="' + t.apt + '">📋 Պատճ. հաղ.</button>' +
+          '<div class="msg-sheet">' +
+            '<div class="msg-sheet-head">' +
+              '<div class="msg-sheet-title">Հաղորդագրություն · Գրաս. ' + t.apt + '</div>' +
+              '<button class="msg-close" type="button" aria-label="Close notification">×</button>' +
+            '</div>' +
+            '<div class="msg-text">' + makeMsg(t.apt).replace(/</g,'&lt;') + '</div>' +
+            '<button class="copy-msg-btn" data-copy="' + t.apt + '">📋 Պատճ. հաղ.</button>' +
+          '</div>' +
         '</div>'
         : '<div class="no-elec">⚡ Առ. աբ.</div>');
 
@@ -3072,6 +3118,21 @@ function render() {
         var open = !wasOpen;
         if (open) body.classList.add('open');
         this.textContent = open ? 'Հաղ. ▴' : 'Հաղ. ▾';
+      });
+    }
+    var messageBody = div.querySelector('.msg-body');
+    var messageClose = div.querySelector('.msg-close');
+    if (messageClose) {
+      messageClose.addEventListener('click', function() {
+        messageBody.classList.remove('open');
+        toggle.textContent = 'Հաղ. ▾';
+      });
+    }
+    if (messageBody) {
+      messageBody.addEventListener('click', function(ev) {
+        if (ev.target !== messageBody) return;
+        messageBody.classList.remove('open');
+        toggle.textContent = 'Հաղ. ▾';
       });
     }
 
@@ -3468,7 +3529,10 @@ setInterval(function() {
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
     navigator.serviceWorker.register('/offices/sw.js', { scope: '/offices/' })
-      .then(function(r) { console.log('SW ok:', r.scope); })
+      .then(function(r) {
+        r.update();
+        console.log('SW ok:', r.scope);
+      })
       .catch(function(e) { console.warn('SW fail:', e); });
   });
 }

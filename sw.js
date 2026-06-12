@@ -1,5 +1,5 @@
-var CACHE_NAME = 'plusone-v30';
-var urlsToCache = ['/offices/', '/offices/index.html', '/offices/dashboard_pwa.html', '/offices/manifest.json', '/offices/icon.png'];
+var CACHE_NAME = 'plusone-v32';
+var urlsToCache = ['/offices/manifest.json', '/offices/icon.png'];
 
 self.addEventListener('install', function(event) {
   self.skipWaiting();
@@ -29,15 +29,23 @@ self.addEventListener('fetch', function(event) {
   if (url.indexOf('script.google.com') !== -1 || url.indexOf('script.googleusercontent.com') !== -1) {
     return;
   }
+  var fetchRequest = event.request.mode === 'navigate'
+    ? new Request(event.request, { cache: 'no-store' })
+    : event.request;
+
   event.respondWith(
-    fetch(event.request).then(function(response) {
+    fetch(fetchRequest).then(function(response) {
       var copy = response.clone();
       caches.open(CACHE_NAME).then(function(cache) {
         if (event.request.method === 'GET') cache.put(event.request, copy);
       });
       return response;
     }).catch(function() {
-      return caches.match(event.request);
+      return caches.match(event.request).then(function(cached) {
+        if (cached) return cached;
+        if (event.request.mode === 'navigate') return caches.match('/offices/dashboard_pwa.html');
+        return Response.error();
+      });
     })
   );
 });
