@@ -3070,10 +3070,10 @@ function render() {
 
   var statsGrid = document.getElementById('statsGrid');
   statsGrid.innerHTML =
-    statCard('🏢 Rent', fmt(f.rentTotal) + ' ֏', fmt(f.rentCollected) + ' ֏ collected', 'c-green', '') +
-    statCard('⚡ Electricity', fmt(f.elecTotal) + ' ֏', fmt(f.elecCollected) + ' ֏ collected', 'c-amber', '') +
-    statCard('📶 Internet', fmt(f.netTotal) + ' ֏', fmt(f.netCollected) + ' ֏ collected', 'c-purple', '') +
-    statCard('💰 Total', fmt(f.totalDue) + ' ֏', fmt(f.totalCollected) + ' ֏ collected', 'c-blue', '');
+    statCard('🏢 Rent', fmt(f.rentTotal) + ' ֏', fmt(f.rentCollected) + ' ֏ collected', 'c-green', '', fmt(f.rentTotal - f.rentCollected) + ' ֏ remaining') +
+    statCard('⚡ Electricity', fmt(f.elecTotal) + ' ֏', fmt(f.elecCollected) + ' ֏ collected', 'c-amber', '', fmt(f.elecTotal - f.elecCollected) + ' ֏ remaining') +
+    statCard('📶 Internet', fmt(f.netTotal) + ' ֏', fmt(f.netCollected) + ' ֏ collected', 'c-purple', '', fmt(f.netTotal - f.netCollected) + ' ֏ remaining') +
+    statCard('💰 Total', fmt(f.totalDue) + ' ֏', fmt(f.totalCollected) + ' ֏ collected', 'c-blue', '', fmt(f.totalDue - f.totalCollected) + ' ֏ remaining');
 
   // Trigger counter animation
   statsGrid.querySelectorAll('.stat-val').forEach(function(el) {
@@ -3243,10 +3243,12 @@ function render() {
   });
 }
 
-function statCard(label, val, sub, valCls, subCls) {
+function statCard(label, val, sub, valCls, subCls, rem) {
   return '<div class="stat-card"><div class="stat-label">' + label + '</div>' +
     '<div class="stat-val ' + (valCls||'') + '">' + val + '</div>' +
-    '<div class="stat-sub ' + (subCls||'') + '">' + sub + '</div></div>';
+    '<div class="stat-sub ' + (subCls||'') + '">' + sub + '</div>' +
+    (rem ? '<div class="stat-sub c-red">' + rem + '</div>' : '') +
+    '</div>';
 }
 
 function progRow(label, pct, cls) {
