@@ -4,21 +4,43 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>
-/* ── SW KILL SWITCH ── runs before anything else ── */
+/* One-time regular-Chrome repair. Incognito has no persistent worker/cache,
+   so regular Chrome must explicitly detach from any old installation. */
 (function() {
-  if (!('serviceWorker' in navigator)) return;
-  // Nuke all caches immediately
+  var repairVersion = 'chrome-repair-20260612-1';
+  var repairKey = 'plusone_browser_repair';
+  var alreadyRepaired = false;
+
+  try {
+    alreadyRepaired = localStorage.getItem(repairKey) === repairVersion;
+  } catch (e) {}
+  if (alreadyRepaired) return;
+
+  try {
+    localStorage.setItem(repairKey, repairVersion);
+    localStorage.removeItem('plusone_snapshot_v3');
+    localStorage.removeItem('plusone_snapshot_v4');
+  } catch (e) {}
+
+  var cacheCleanup = Promise.resolve();
   if ('caches' in window) {
-    caches.keys().then(function(keys) {
-      keys.forEach(function(k) { caches.delete(k); });
+    cacheCleanup = caches.keys().then(function(keys) {
+      return Promise.all(keys.map(function(key) { return caches.delete(key); }));
     });
   }
-  // Unregister every SW registration except the current one
-  navigator.serviceWorker.getRegistrations().then(function(regs) {
-    regs.forEach(function(reg) {
-      // Force update — picks up new sw.js even if byte-identical check was cached
-      reg.update();
+
+  var workerCleanup = Promise.resolve();
+  if ('serviceWorker' in navigator) {
+    workerCleanup = navigator.serviceWorker.getRegistrations().then(function(regs) {
+      return Promise.all(regs.map(function(reg) { return reg.unregister(); }));
     });
+  }
+
+  Promise.all([cacheCleanup, workerCleanup]).then(function() {
+    var url = new URL(location.href);
+    url.pathname = '/offices/';
+    url.searchParams.set('repair', repairVersion);
+    location.replace(url.pathname + url.search + url.hash);
   });
 })();
 </script>
@@ -3576,15 +3598,6 @@ setInterval(function() {
   if (lastSyncTime) document.getElementById('lastSync').textContent = timeAgo(lastSyncTime);
 }, 30000);
 
-/* ═══════════════════════════════════════════════
-   SERVICE WORKER — unregister any existing SW
-   No SW = no cache interception = same speed as incognito
-═══════════════════════════════════════════════ */
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(function(regs) {
-    regs.forEach(function(reg) { reg.unregister(); });
-  });
-}
 </script>
 </body>
 </html>
