@@ -1453,6 +1453,7 @@ body.notification-open { overflow: hidden; touch-action: none; }
     <span>Կարգ.</span>
     <select id="sortSel" onchange="render()">
       <option value="day">Ամսաթիվ</option>
+      <option value="floor">Floor</option>
       <option value="name">Անուն</option>
       <option value="rent">Վարձ ↓</option>
       <option value="unpaid">Չվճ. ↓</option>
@@ -3054,6 +3055,14 @@ function render() {
       var ub = !isRentCovered(sb.r) ? b.rent : 0;
       return ub - ua;
     }
+    if (sortBy === 'floor') {
+      var fa = aptFloor(a.apt), fb = aptFloor(b.apt);
+      if (fa === null && fb === null) return a.apt.localeCompare(b.apt);
+      if (fa === null) return 1;
+      if (fb === null) return -1;
+      if (fa !== fb) return parseInt(fa, 10) - parseInt(fb, 10);
+      return parseInt(a.apt.slice(-2), 10) - parseInt(b.apt.slice(-2), 10);
+    }
     return (a.day || 99) - (b.day || 99);
   });
 
@@ -3097,6 +3106,7 @@ function render() {
   }
 
   var lastDay = null;
+  var lastFloor = null;
   visibleList.forEach(function(t) {
     var e = utilityForTenant(t);
     var hasE = e.amdDay !== undefined;
@@ -3111,6 +3121,18 @@ function render() {
     var isToday = t.day === today;
     var isOverdue = t.day > 0 && t.day < today && !isRentCovered(s.r);
     var elecDue = hasE && isElecPeriod && s.e !== 'paid';
+    // Floor group header
+    if (!q && sortBy === 'floor') {
+      var tFloor = aptFloor(t.apt);
+      var floorKey = tFloor !== null ? tFloor : '__other__';
+      if (floorKey !== lastFloor) {
+        lastFloor = floorKey;
+        var fg = document.createElement('div');
+        fg.className = 'day-grp';
+        fg.textContent = tFloor !== null ? 'Floor ' + parseInt(tFloor, 10) : 'Other';
+        el.appendChild(fg);
+      }
+    }
     // Day group header
     if (!q && curTab !== 'elec' && sortBy === 'day' && t.day !== lastDay) {
       lastDay = t.day;
@@ -3241,6 +3263,11 @@ function render() {
 
     el.appendChild(div);
   });
+}
+
+function aptFloor(apt) {
+  if (/^\d+$/.test(apt) && apt.length > 2) return apt.slice(0, apt.length - 2);
+  return null;
 }
 
 function statCard(label, val, sub, valCls, subCls, rem) {
