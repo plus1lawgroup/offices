@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="hy">
 <head>
 <meta charset="UTF-8">
@@ -51,7 +51,7 @@
 <meta name="apple-mobile-web-app-title" content="Plus One">
 <link rel="manifest" href="/offices/manifest.json">
 <link rel="apple-touch-icon" href="/offices/icon.png">
-<title>Plus One · Գրասենյակներ</title>
+<title>Plus One · Offices</title>
 <style>
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    PLUS ONE LAW GROUP — Premium Design System 2026
@@ -1395,20 +1395,20 @@ body.notification-open { overflow: hidden; touch-action: none; }
 <body>
 
 <!-- Offline banner -->
-<div id="offlineBanner">📵 Ցանցը անջատ է · ցուցադրվում է կեշ</div>
+<div id="offlineBanner">📵 Offline · showing cached data</div>
 
 <!-- Header -->
 <div class="header">
   <div class="header-inner">
   <img class="header-logo" src="icon.png" alt="Plus One" onerror="this.style.display='none'">
   <div class="header-title">
-    <span class="header-name">Գրասենյակներ</span>
+    <span class="header-name">Offices</span>
     <span class="header-sub">Plus One Law Group</span>
   </div>
-  <button class="header-add-btn" onclick="openAddTenant()" title="Ավելացնել վարձակալ">＋<span class="add-btn-label"> Վարձակալ</span></button>
+  <button class="header-add-btn" onclick="openAddTenant()" title="Add Tenant">＋<span class="add-btn-label"> Tenant</span></button>
   <button class="sync-pill" id="syncBtn" onclick="syncBtnClick()">
     <span class="sync-spin" id="syncSpinner">⟳</span>
-    <span id="syncText">Բեռն...</span>
+    <span id="syncText">Loading...</span>
   </button>
   </div>
 </div>
@@ -1424,7 +1424,7 @@ body.notification-open { overflow: hidden; touch-action: none; }
     <span class="last-sync" id="lastSync"></span>
   </div>
   <div class="search-wrap">
-    <input type="text" id="search" placeholder="🔍 Գրս., անուն, հեռ...." autocomplete="off" autocorrect="off">
+    <input type="text" id="search" placeholder="🔍 Office, name, phone..." autocomplete="off" autocorrect="off">
     <button class="search-clear" id="searchClear" onclick="clearSearch()">✕</button>
   </div>
   </div>
@@ -1462,7 +1462,7 @@ body.notification-open { overflow: hidden; touch-action: none; }
 
   <!-- Financial report -->
   <button class="report-toggle" onclick="toggleReport()" id="reportToggle">
-    📊 Ֆինանսական հաշվետվություն <span id="reportArrow">▾</span>
+    📊 Financial Report <span id="reportArrow">▾</span>
   </button>
   <div class="report-body" id="reportBody"></div>
 
@@ -1491,64 +1491,64 @@ body.notification-open { overflow: hidden; touch-action: none; }
 <div class="modal-bg hidden" id="modalBg">
   <div class="modal">
     <div class="modal-handle"></div>
-    <h2 id="modalTitle">✏️ Խմբագրել</h2>
-    <div class="field"><label>Գրասենյակ / համար</label><input type="text" id="eA" autocomplete="off"></div>
+    <h2 id="modalTitle">✏️ Edit</h2>
+    <div class="field"><label>Office / Number</label><input type="text" id="eA" autocomplete="off"></div>
     <input type="hidden" id="eN">
-    <div class="field"><label>Հեռախոս / Username</label><input type="text" id="eP" autocomplete="off"></div>
-    <div class="field"><label>Կապի ալիք</label>
+    <div class="field"><label>Phone / Username</label><input type="text" id="eP" autocomplete="off"></div>
+    <div class="field"><label>Contact channel</label>
       <select id="eCh">
         <option value="wa">WhatsApp</option>
         <option value="tg">Telegram</option>
         <option value="sms">SMS</option>
       </select>
     </div>
-    <div class="field"><label>Վճ. ամսաթիվ (1–31)</label><input type="number" id="eD" min="1" max="31"></div>
-    <div class="field"><label>Վարձ (֏)</label><input type="number" id="eR"></div>
+    <div class="field"><label>Payment date (1–31)</label><input type="number" id="eD" min="1" max="31"></div>
+    <div class="field"><label>Rent (֏)</label><input type="number" id="eR"></div>
     <div class="field"><label>📶 Internet</label>
       <select id="eInt">
         <option value="yes">Yes</option>
         <option value="no">No</option>
       </select>
     </div>
-    <div class="field"><label>Նախորդ կոմունալը չի վճարում</label>
+    <div class="field"><label>Does not pay previous utility</label>
       <select id="eSkipPrevUtil">
         <option value="no">No</option>
         <option value="yes">Yes</option>
       </select>
     </div>
     <div class="contract-fields" id="contractFields">
-      <div class="field"><label>Անձի տեսակ</label>
+      <div class="field"><label>Person type</label>
         <select id="eEntityType" onchange="updateEntityFields()">
-          <option value="physical">Ֆիզիկական անձ</option>
-          <option value="legal">Իրավաբանական անձ</option>
+          <option value="physical">Individual</option>
+          <option value="legal">Legal entity</option>
         </select>
       </div>
       <div id="physicalFields">
-        <div class="field"><label>Ֆիզ. անձի անուն</label><input type="text" id="ePhysicalName" autocomplete="off"></div>
-        <div class="field"><label>Անձնագիր</label><input type="text" id="ePhysicalPassport" autocomplete="off"></div>
-        <div class="field"><label>Հասցե</label><input type="text" id="ePhysicalAddress" autocomplete="off"></div>
-        <div class="field"><label>Տրված է</label><input type="text" id="ePhysicalIssuedFrom" autocomplete="off"></div>
-        <div class="field"><label>Վավեր է մինչև</label><input type="date" id="ePhysicalValidUntil"></div>
+        <div class="field"><label>Individual name</label><input type="text" id="ePhysicalName" autocomplete="off"></div>
+        <div class="field"><label>Passport</label><input type="text" id="ePhysicalPassport" autocomplete="off"></div>
+        <div class="field"><label>Address</label><input type="text" id="ePhysicalAddress" autocomplete="off"></div>
+        <div class="field"><label>Issued by</label><input type="text" id="ePhysicalIssuedFrom" autocomplete="off"></div>
+        <div class="field"><label>Valid until</label><input type="date" id="ePhysicalValidUntil"></div>
       </div>
       <div id="legalFields" style="display:none">
-        <div class="field"><label>Իրավ. անձի անվանում</label><input type="text" id="eLegalName" autocomplete="off"></div>
-        <div class="field"><label>ՀՎՀՀ</label><input type="text" id="eHvhh" autocomplete="off"></div>
-        <div class="field"><label>Իրավ. հասցե</label><input type="text" id="eLegalAddress" autocomplete="off"></div>
-        <div class="field"><label>Գրանցման համար</label><input type="text" id="eRegistrationNumber" autocomplete="off"></div>
-        <div class="field"><label>Տնօրենի անուն</label><input type="text" id="eCeoName" autocomplete="off"></div>
-        <div class="field"><label>Տնօրենի անձնագիր</label><input type="text" id="eCeoPassport" autocomplete="off"></div>
-        <div class="field"><label>Տնօրենի հասցե</label><input type="text" id="eCeoAddress" autocomplete="off"></div>
-        <div class="field"><label>Տնօրենի տրված է</label><input type="text" id="eCeoIssuedFrom" autocomplete="off"></div>
-        <div class="field"><label>Տնօրենի վավեր է մինչև</label><input type="date" id="eCeoValidUntil"></div>
+        <div class="field"><label>Legal entity name</label><input type="text" id="eLegalName" autocomplete="off"></div>
+        <div class="field"><label>Tax ID</label><input type="text" id="eHvhh" autocomplete="off"></div>
+        <div class="field"><label>Legal address</label><input type="text" id="eLegalAddress" autocomplete="off"></div>
+        <div class="field"><label>Registration number</label><input type="text" id="eRegistrationNumber" autocomplete="off"></div>
+        <div class="field"><label>Director name</label><input type="text" id="eCeoName" autocomplete="off"></div>
+        <div class="field"><label>Director passport</label><input type="text" id="eCeoPassport" autocomplete="off"></div>
+        <div class="field"><label>Director address</label><input type="text" id="eCeoAddress" autocomplete="off"></div>
+        <div class="field"><label>Director issued by</label><input type="text" id="eCeoIssuedFrom" autocomplete="off"></div>
+        <div class="field"><label>Director valid until</label><input type="date" id="eCeoValidUntil"></div>
       </div>
-      <div class="field"><label>Պայմանագրի սկիզբ</label><input type="date" id="eStartDate"></div>
-      <div class="field"><label>Պայմանագրի ավարտ</label><input type="date" id="eEndDate"></div>
-      <div class="field"><label>Վճարման օր</label><input type="number" id="ePaymentDate" min="1" max="31"></div>
+      <div class="field"><label>Contract start</label><input type="date" id="eStartDate"></div>
+      <div class="field"><label>Contract end</label><input type="date" id="eEndDate"></div>
+      <div class="field"><label>Payment day</label><input type="number" id="ePaymentDate" min="1" max="31"></div>
     </div>
     <div class="modal-btns">
-      <button class="modal-cancel" onclick="closeModal()">Չեղ.</button>
-      <button class="modal-end" id="modalEndBtn" onclick="endContract()" style="display:none">Ավարտել</button>
-      <button class="modal-save" id="modalSaveBtn" onclick="saveEdit()">💾 Պահպանել</button>
+      <button class="modal-cancel" onclick="closeModal()">Cancel</button>
+      <button class="modal-end" id="modalEndBtn" onclick="endContract()" style="display:none">End Contract</button>
+      <button class="modal-save" id="modalSaveBtn" onclick="saveEdit()">💾 Save</button>
     </div>
   </div>
 </div>
@@ -1561,11 +1561,11 @@ body.notification-open { overflow: hidden; touch-action: none; }
 <div class="msg-body" id="notificationModal" role="dialog" aria-modal="true" aria-hidden="true">
   <div class="msg-sheet" id="notificationSheet">
     <div class="msg-sheet-head">
-      <div class="msg-sheet-title" id="notificationTitle">Հաղորդագրություն</div>
-      <button class="msg-close" id="notificationClose" type="button" aria-label="Փակել">×</button>
+      <div class="msg-sheet-title" id="notificationTitle">Message</div>
+      <button class="msg-close" id="notificationClose" type="button" aria-label="Close">×</button>
     </div>
     <div class="msg-text" id="notificationText"></div>
-    <button class="copy-msg-btn" id="notificationCopy" type="button">📋 Պատճ. հաղ.</button>
+    <button class="copy-msg-btn" id="notificationCopy" type="button">📋 Copy message</button>
   </div>
 </div>
 
@@ -1685,9 +1685,9 @@ function chBadge(ch) {
 function timeAgo(date) {
   if (!date) return '';
   var s = Math.round((Date.now() - date) / 1000);
-  if (s < 60) return s + ' վ. առաջ';
+  if (s < 60) return s + ' sec ago';
   var m = Math.round(s / 60);
-  return m + ' ր. առաջ';
+  return m + ' min ago';
 }
 
 function highlight(text, q) {
@@ -1883,8 +1883,8 @@ function setSyncState(state) {
   var txt = document.getElementById('syncText');
   btn.className = 'sync-pill ' + state;
   if (state === 'loading') { spin.style.display = ''; spin.className = 'sync-spin'; txt.textContent = '...'; }
-  else if (state === 'ok')  { spin.style.display = 'none'; txt.textContent = '✓ Սինք'; }
-  else if (state === 'err') { spin.style.display = 'none'; txt.textContent = '✗ Ցանց'; btn.title = lastSyncError || ''; }
+  else if (state === 'ok')  { spin.style.display = 'none'; txt.textContent = '✓ Sync'; }
+  else if (state === 'err') { spin.style.display = 'none'; txt.textContent = '✗ Network'; btn.title = lastSyncError || ''; }
   if (lastSyncTime) {
     document.getElementById('lastSync').textContent = timeAgo(lastSyncTime);
   }
@@ -2064,7 +2064,7 @@ function refreshAll() {
       var cachedAt = c.ts ? formatDateTime(new Date(c.ts).toISOString()) : '';
       toast('📦 Offline data' + (cachedAt ? ' · ' + cachedAt : ''), 'error');
     } else {
-      document.getElementById('list').innerHTML = '<div class="empty"><div class="empty-icon">↻</div>Չհաջողվեց բեռնել · սեղմեք Սինք</div>';
+      document.getElementById('list').innerHTML = '<div class="empty"><div class="empty-icon">↻</div>Failed to load · tap Sync</div>';
     }
   });
 }
@@ -2193,30 +2193,30 @@ function renderReportBody() {
            '<span class="report-row-val ' + (cls||'') + '">' + val + '</span></div>';
   }
   body.innerHTML =
-    '<div class="report-section">Վճարումներ</div>' +
-    row('🏢 Վարձ հավ.', fmt(f.rentCollected) + ' ֏', 'c-green') +
-    row('🏢 Վարձ մնաց', fmt(f.rentTotal - f.rentCollected) + ' ֏', 'c-red') +
-    row('⚡ Էլ. հավ.', fmt(f.elecCollected) + ' ֏', 'c-green') +
-    row('⚡ Էլ. մնաց', fmt(f.elecTotal - f.elecCollected) + ' ֏', 'c-red') +
-    row('📶 Net հավ.', fmt(f.netCollected) + ' ֏', 'c-green') +
-    row('📶 Net մնաց', fmt(f.netTotal - f.netCollected) + ' ֏', 'c-red') +
-    '<div class="report-section">Ամփոփ</div>' +
-    row('💰 Ընդ. հավ.', fmt(f.totalCollected) + ' ֏', 'c-green') +
-    row('💰 Ընդ. մնաց', fmt(f.totalDue - f.totalCollected) + ' ֏', 'c-red') +
-    row('⟳ Դեպ. ({0})'.replace('{0}', f.depCount), fmt(f.depAmt) + ' ֏', 'c-amber') +
-    '<div class="report-section">Չվճ. լավագույն</div>' +
+    '<div class="report-section">Payments</div>' +
+    row('🏢 Rent collected', fmt(f.rentCollected) + ' ֏', 'c-green') +
+    row('🏢 Rent remaining', fmt(f.rentTotal - f.rentCollected) + ' ֏', 'c-red') +
+    row('⚡ Electricity collected', fmt(f.elecCollected) + ' ֏', 'c-green') +
+    row('⚡ Electricity remaining', fmt(f.elecTotal - f.elecCollected) + ' ֏', 'c-red') +
+    row('📶 Internet collected', fmt(f.netCollected) + ' ֏', 'c-green') +
+    row('📶 Internet remaining', fmt(f.netTotal - f.netCollected) + ' ֏', 'c-red') +
+    '<div class="report-section">Summary</div>' +
+    row('💰 Total collected', fmt(f.totalCollected) + ' ֏', 'c-green') +
+    row('💰 Total remaining', fmt(f.totalDue - f.totalCollected) + ' ֏', 'c-red') +
+    row('⟳ Deposit ({0})'.replace('{0}', f.depCount), fmt(f.depAmt) + ' ֏', 'c-amber') +
+    '<div class="report-section">Top unpaid</div>' +
     f.unpaidList.slice(0, 5).map(function(t) {
-      return row('Գրս. ' + t.apt + ' · ' + t.name, fmt(t.rent) + ' ֏', 'c-red');
+      return row('Office ' + t.apt + ' · ' + t.name, fmt(t.rent) + ' ֏', 'c-red');
     }).join('') +
     '<div class="export-row">' +
       '<button class="export-btn primary" onclick="exportCSV()">📥 CSV</button>' +
-      '<button class="export-btn" onclick="shareReport()">📤 Ուղ.</button>' +
+      '<button class="export-btn" onclick="shareReport()">📤 Share</button>' +
     '</div>';
 }
 
 function exportCSV() {
   var f = calcFinancials();
-  var rows = [['Գրս.', 'Անուն', 'Հեռ.', 'Վարձ', 'Էլ.', 'Net', 'Վ.Կ.', 'Էլ.Կ.']];
+  var rows = [['Office', 'Name', 'Phone', 'Rent', 'Electricity', 'Internet', 'Rent status', 'Elec status']];
   tenants.forEach(function(t) {
     var s = st[t.apt] || {};
     var e = utilityForTenant(t);
@@ -2230,7 +2230,7 @@ function exportCSV() {
   a.href = url; a.download = 'plusone_' + curMonth + '.csv';
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  toast('📥 CSV պատրաստ', 'success');
+  toast('📥 CSV ready', 'success');
 }
 
 function shareReport() {
@@ -2238,7 +2238,7 @@ function shareReport() {
   if (navigator.share) {
     navigator.share({ title: 'Plus One ' + curMonth, text: text });
   } else if (navigator.clipboard) {
-    navigator.clipboard.writeText(text).then(function() { toast('✓ Պատճ.', 'success'); });
+    navigator.clipboard.writeText(text).then(function() { toast('✓ Copied', 'success'); });
   }
 }
 
@@ -2260,9 +2260,9 @@ function renderChart() {
   ctx.scale(dpr, dpr);
 
   var categories = [
-    { label: 'Վարձ', total: f.rentTotal, collected: f.rentCollected, color: '#10b981' },
-    { label: 'Էլ.', total: f.elecTotal, collected: f.elecCollected, color: '#2563eb' },
-    { label: 'Net', total: f.netTotal, collected: f.netCollected, color: '#7c3aed' }
+    { label: 'Rent', total: f.rentTotal, collected: f.rentCollected, color: '#10b981' },
+    { label: 'Electricity', total: f.elecTotal, collected: f.elecCollected, color: '#2563eb' },
+    { label: 'Internet', total: f.netTotal, collected: f.netCollected, color: '#7c3aed' }
   ];
 
   var padding = { top: 10, right: 10, bottom: 30, left: 10 };
@@ -2305,7 +2305,7 @@ function renderChart() {
   });
 
   var grandPct = f.totalDue ? Math.round(f.totalCollected / f.totalDue * 100) : 0;
-  document.getElementById('chartPct').textContent = grandPct + '% հավ.';
+  document.getElementById('chartPct').textContent = grandPct + '% collected';
 }
 
 /* ═══════════════════════════════════════════════
@@ -2382,18 +2382,18 @@ function savePayment(apt, tenantName, type, status, prevStatus) {
       if (type === 'rent') st[apt].rentPaidAt = rentPaidAt;
       if (type === 'elec') st[apt].electricityPaidAt = elecPaidAt;
       patchCard(apt);   // refresh paid-at timestamps on the card
-      setSyncState('ok'); toast('✓ Պահ.', 'success');
+      setSyncState('ok'); toast('✓ Saved', 'success');
     } else {
       if (type === 'elec') st[apt].e = prevStatus;
       else st[apt].r = prevStatus;
       patchCard(apt);
-      setSyncState('err'); toast('✗ Սխ. — rollback', 'error');
+      setSyncState('err'); toast('✗ Error — rollback', 'error');
     }
   }).catch(function() {
     if (type === 'elec') st[apt].e = prevStatus;
     else st[apt].r = prevStatus;
     patchCard(apt);
-    setSyncState('err'); toast('✗ Ցանց — rollback', 'error');
+    setSyncState('err'); toast('✗ Network — rollback', 'error');
   }).finally(function() {
   });
 }
@@ -2422,7 +2422,7 @@ function savePrepayment(apt, tenantName) {
   }
   render();
   triggerStatusAnim(apt);
-  toast('💰 +1 Պահ. ' + targetMonth, 'success');
+  toast('💰 +1 Saved ' + targetMonth, 'success');
   setSyncState('loading');
 
   // ── BACKGROUND SYNC ──
@@ -2450,7 +2450,7 @@ function savePrepayment(apt, tenantName) {
     if (prevData) paymentsData[pKey] = prevData;
     else delete paymentsData[pKey];
     setSyncState('err');
-    toast('✗ +1 Սխ. — rollback', 'error');
+    toast('✗ +1 Error — rollback', 'error');
     render();
     triggerStatusAnim(apt);
   });
@@ -2464,7 +2464,7 @@ function deletePrepayment(apt, tenantName) {
   var rentAmt = Number(tenant.rent || 0);
   var existing = paymentRow(targetMonth, apt);
   if (!existing || existing.rentStatus !== 'prepaid') {
-    toast('Ջնջելու +1 վարձ չկա', 'error');
+    toast('No prepayment to delete', 'error');
     return;
   }
 
@@ -2502,7 +2502,7 @@ function deletePrepayment(apt, tenantName) {
 
 function clearRentPayment(apt, tenantName) {
   var prev = st[apt] ? st[apt].r : null;
-  if (!prev) { toast('Ջնջելու վարձի վճարում չկա', 'error'); return; }
+  if (!prev) { toast('No rent payment to clear', 'error'); return; }
   if (!st[apt]) st[apt] = {};
   st[apt].r = null;
   st[apt].rentPaidAt = '';
@@ -2718,7 +2718,7 @@ function openEdit(apt) {
   editingApt = apt;
   var t = tenants.find(function(x) { return x.apt === apt; });
   if (!t) return;
-  document.getElementById('modalTitle').textContent = '✏️ Գրս. ' + apt;
+  document.getElementById('modalTitle').textContent = '✏️ Office ' + apt;
   document.getElementById('eA').value = t.apt;
   document.getElementById('eA').disabled = true;
   document.getElementById('eN').value = t.name;
@@ -2738,7 +2738,7 @@ function openEdit(apt) {
 function openAddTenant() {
   modalMode = 'add';
   editingApt = null;
-  document.getElementById('modalTitle').textContent = '＋ Ավելացնել վարձակալ';
+  document.getElementById('modalTitle').textContent = '＋ Add Tenant';
   document.getElementById('eA').value = '';
   document.getElementById('eA').disabled = false;
   document.getElementById('eN').value = '';
@@ -2764,9 +2764,9 @@ function closeModal() {
 
 function saveEdit() {
   var aptValue = officeKey(modalMode === 'add' ? document.getElementById('eA').value : editingApt);
-  if (!aptValue) { toast('Գրասենյակի համարը պարտադիր է', 'error'); return; }
+  if (!aptValue) { toast('Office number is required', 'error'); return; }
   if (modalMode === 'add' && tenants.some(function(x) { return x.apt === aptValue; })) {
-    toast('Այդ գրասենյակը արդեն կա', 'error');
+    toast('This office already exists', 'error');
     return;
   }
   var btn = document.getElementById('modalSaveBtn');
@@ -2801,8 +2801,8 @@ function saveEdit() {
     paymentDate: document.getElementById('ePaymentDate').value || document.getElementById('eD').value
   };
   if (!fields.name || !fields.rent) {
-    toast('Անունը և վարձը պարտադիր են', 'error');
-    btn.textContent = '💾 Պահ.'; btn.disabled = false;
+    toast('Name and rent are required', 'error');
+    btn.textContent = '💾 Save'; btn.disabled = false;
     return;
   }
   saveTenant(aptValue, fields).then(function(ok) {
@@ -2816,10 +2816,10 @@ function saveEdit() {
         if (!st[aptValue]) st[aptValue] = { e: null, r: null };
       }
       if (elecMap[aptValue]) elecMap[aptValue].internet = (fields.internet === 'yes');
-      toast('✓ Պահ.', 'success');
+      toast('✓ Saved', 'success');
       closeModal(); render();
-    } else { toast('✗ Սխ.', 'error'); }
-    btn.textContent = '💾 Պահ.'; btn.disabled = false;
+    } else { toast('✗ Error', 'error'); }
+    btn.textContent = '💾 Save'; btn.disabled = false;
   });
 }
 
@@ -2864,10 +2864,10 @@ function endContract() {
   var btn = document.getElementById('modalEndBtn');
   btn.textContent = '⟳'; btn.disabled = true;
   saveTenant(editingApt, fields).then(function(ok) {
-    btn.textContent = 'Ավարտել'; btn.disabled = false;
-    if (!ok) { toast('✗ Սխ.', 'error'); return; }
+    btn.textContent = 'End Contract'; btn.disabled = false;
+    if (!ok) { toast('✗ Error', 'error'); return; }
     tenants = tenants.filter(function(x) { return x.apt !== editingApt; });
-    toast('Պայմ. ավարտված է', 'success');
+    toast('Contract ended', 'success');
     closeModal();
     render();
   });
@@ -2919,7 +2919,7 @@ function sendMsg(apt) {
   var t = tenants.find(function(x) { return x.apt === apt; });
   if (!t) return;
   var msg = makeMsg(apt);
-  if (!msg) { toast('⚡ Տվյ. չկա', 'error'); return; }
+  if (!msg) { toast('⚡ No data', 'error'); return; }
   var encoded = encodeURIComponent(msg);
   var phone = t.phone, ch = t.ch;
   if (ch === 'wa') { window.open('https://wa.me/' + phone.replace(/[^0-9]/g, '') + '?text=' + encoded, '_blank'); }
@@ -2930,9 +2930,9 @@ function sendMsg(apt) {
 
 function copyMsg(apt) {
   var m = makeMsg(apt);
-  if (!m) { toast('⚡ Տվ. չկա', 'error'); return; }
+  if (!m) { toast('⚡ No data', 'error'); return; }
   if (navigator.clipboard) {
-    navigator.clipboard.writeText(m).then(function() { toast('✓ Պատճ.', 'success'); });
+    navigator.clipboard.writeText(m).then(function() { toast('✓ Copied', 'success'); });
   } else { toast('✗ Clipboard', 'error'); }
 }
 
@@ -2940,11 +2940,11 @@ function openNotification(apt) {
   var modal = document.getElementById('notificationModal');
   var text = makeMsg(apt);
   if (!modal || !text) {
-    toast('⚡ Տվ. չկա', 'error');
+    toast('⚡ No data', 'error');
     return;
   }
   notificationApt = apt;
-  document.getElementById('notificationTitle').textContent = 'Հաղորդագրություն · Գրաս. ' + apt;
+  document.getElementById('notificationTitle').textContent = 'Message · Office ' + apt;
   document.getElementById('notificationText').textContent = text;
   document.getElementById('notificationSheet').scrollTop = 0;
   modal.classList.add('open');
@@ -3101,7 +3101,7 @@ function render() {
   var el = document.getElementById('list');
   el.innerHTML = '';
   if (!visibleList.length) {
-    el.innerHTML = '<div class="empty"><div class="empty-icon">' + (paidCount > 0 ? '✓' : '🔍') + '</div>' + (paidCount > 0 ? 'Բոլորը վճ. ✓' : 'Արդյ. չկա') + '</div>';
+    el.innerHTML = '<div class="empty"><div class="empty-icon">' + (paidCount > 0 ? '✓' : '🔍') + '</div>' + (paidCount > 0 ? 'All paid ✓' : 'No results') + '</div>';
     return;
   }
 
@@ -3138,8 +3138,8 @@ function render() {
       lastDay = t.day;
       var dg = document.createElement('div');
       dg.className = 'day-grp' + (isToday ? ' today-grp' : '');
-      dg.innerHTML = '<span class="today-date-icon">' + t.day + '</span> ' + t.day + '-ին' +
-        (isToday ? ' <span class="day-grp-badge">Այսօր</span>' : '');
+      dg.innerHTML = '<span class="today-date-icon">' + t.day + '</span> ' + 'Day ' + t.day + '' +
+        (isToday ? ' <span class="day-grp-badge">Today</span>' : '');
       el.appendChild(dg);
     }
 
@@ -3160,7 +3160,7 @@ function render() {
 
     var nameHl = highlight(t.name, q);
     var phoneHl = highlight(t.phone || '', q);
-    var aptHl = highlight('Գրս. ' + t.apt, q);
+    var aptHl = highlight('Office ' + t.apt, q);
 
     var div = document.createElement('div');
     div.className = 'card' + (isOverdue ? ' overdue-flash' : '');
@@ -3176,7 +3176,7 @@ function render() {
         '</div>' +
         '<div class="card-right">' +
           '<div class="rent-amt">' + fmt(t.rent) + ' ֏</div>' +
-          '<div class="rent-sub">Վճ. ' + t.day + '-ին</div>' +
+          '<div class="rent-sub">Due day ' + t.day + '</div>' +
           (rentPaidText || elecPaidText || netPaidText ?
             '<div class="paid-at-table">' +
               (rentPaidText  ? '<div class="pa-row pa-rent"><span class="pa-icon">🏢</span><span class="pa-time">' + rentPaidText  + '</span></div>' : '') +
@@ -3193,14 +3193,14 @@ function render() {
         '<button class="' + dCls + '" data-deposit="' + t.apt + '" data-name="' + t.name + '">' + (s.r === 'deposit' ? '⟳ Deposit<small>saved</small>' : '⟳ Deposit<small>this month</small>') + '</button>' +
         '<button class="action-btn prepay-btn' + (hasNextPrepay ? ' is-active' : '') + '" data-prepay="' + t.apt + '" data-name="' + t.name + '" data-active="' + (hasNextPrepay ? '1' : '0') + '" title="Click to save or remove next month prepayment">' + (hasNextPrepay ? '+1 Saved<small>click: remove</small>' : '+1 Prepay<small>next month</small>') + '</button>' +
         '<div class="quick-btns">' +
-          '<button class="icon-btn" data-edit="' + t.apt + '" title="Խմ.">✏️</button>' +
-          (hasE ? '<button class="icon-btn" data-copy="' + t.apt + '" title="Պատճ.">📋</button>' : '') +
-          '<button class="send-btn" data-send="' + t.apt + '" title="Ուղ.">📤</button>' +
+          '<button class="icon-btn" data-edit="' + t.apt + '" title="Edit">✏️</button>' +
+          (hasE ? '<button class="icon-btn" data-copy="' + t.apt + '" title="Copy">📋</button>' : '') +
+          '<button class="send-btn" data-send="' + t.apt + '" title="Send">📤</button>' +
         '</div>' +
       '</div>' +
       (hasE ?
-        '<button class="msg-toggle" data-message="' + t.apt + '">Հաղ. ▾</button>'
-        : '<div class="no-elec">⚡ Առ. աբ.</div>');
+        '<button class="msg-toggle" data-message="' + t.apt + '">Message ▾</button>'
+        : '<div class="no-elec">⚡ No subscription</div>');
 
     // Events
     div.querySelectorAll('[data-type]').forEach(function(btn) {
@@ -3306,7 +3306,7 @@ function rLabel(s) {
   document.addEventListener('touchmove', function(e) {
     if (!pulling) return;
     var dy = e.touches[0].clientY - startY;
-    if (dy > 60) { ptr.innerHTML = '<span class="ptr-spin">⟳</span> Թ. թ...'; ptr.classList.add('active'); }
+    if (dy > 60) { ptr.innerHTML = '<span class="ptr-spin">⟳</span> Refreshing...'; ptr.classList.add('active'); }
   }, { passive: true });
   document.addEventListener('touchend', function() {
     if (ptr.classList.contains('active')) {
@@ -3436,7 +3436,7 @@ function renderMeterPanel() {
 
   var container = document.getElementById('meterList');
   if (!tenants.length) {
-    container.innerHTML = '<div class="meter-empty">Վարձակալներ չկան</div>';
+    container.innerHTML = '<div class="meter-empty">No tenants</div>';
     return;
   }
 
