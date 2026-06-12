@@ -3070,9 +3070,10 @@ function render() {
 
   var statsGrid = document.getElementById('statsGrid');
   statsGrid.innerHTML =
-    statCard('🏢 Վardzakal', fmt(f.rentTotal) + ' ֏', fmt(f.rentCollected) + ' ֏ հavakum', 'c-green', '') +
-    statCard('⚡ Electricity', fmt(f.elecTotal) + ' ֏', fmt(f.elecCollected) + ' ֏ հavakum', 'c-amber', '') +
-    statCard('💰 Total', fmt(f.totalDue) + ' ֏', fmt(f.totalCollected) + ' ֏ հavakum', 'c-blue', '');
+    statCard('🏢 Rent', fmt(f.rentTotal) + ' ֏', fmt(f.rentCollected) + ' ֏ collected', 'c-green', '') +
+    statCard('⚡ Electricity', fmt(f.elecTotal) + ' ֏', fmt(f.elecCollected) + ' ֏ collected', 'c-amber', '') +
+    statCard('📶 Internet', fmt(f.netTotal) + ' ֏', fmt(f.netCollected) + ' ֏ collected', 'c-purple', '') +
+    statCard('💰 Total', fmt(f.totalDue) + ' ֏', fmt(f.totalCollected) + ' ֏ collected', 'c-blue', '');
 
   // Trigger counter animation
   statsGrid.querySelectorAll('.stat-val').forEach(function(el) {
