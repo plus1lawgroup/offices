@@ -2896,7 +2896,7 @@ function clearSearch() {
   render();
 }
 
-document.querySelectorAll('.chip').forEach(function(b) {
+document.querySelectorAll('.chip[data-tab]').forEach(function(b) {
   b.addEventListener('click', function() {
     var prevTab = curTab;
     curTab = this.dataset.tab;
