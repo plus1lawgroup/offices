@@ -1577,41 +1577,32 @@ body.notification-open { overflow: hidden; touch-action: none; }
 ═══════════════════════════════════════════════ */
 var API = 'https://script.google.com/macros/s/AKfycbxN__cD8D70j5T6VrWXzrR0HdS8mmjDLVybfOu5888XzwRGHbggZSFvk3I4CBiYd5FN/exec';
 
-/* JSONP helper — bypasses CORS for Google Apps Script */
+/* Race fetch (no credentials) against JSONP — fastest winner used.
+   fetch omits cookies so Google won't redirect the owner's account to auth. */
 function jsonp(url) {
-  // Use fetch with no credentials first — this prevents Google from issuing an
-  // auth redirect when the script owner's account cookies are present in Chrome.
-  var ctrl = window.AbortController ? new AbortController() : null;
-  var fetchTimer = ctrl ? setTimeout(function() { ctrl.abort(); }, 20000) : null;
-  return fetch(url, {
-    credentials: 'omit',
-    mode: 'cors',
-    signal: ctrl ? ctrl.signal : undefined
-  })
-  .then(function(r) {
-    clearTimeout(fetchTimer);
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    return r.json();
-  })
-  .catch(function() {
-    clearTimeout(fetchTimer);
-    // Fallback: classic JSONP script injection
-    return new Promise(function(resolve, reject) {
-      var cbName = '_cb' + Date.now() + Math.floor(Math.random() * 1e6);
-      var script = document.createElement('script');
-      var timer = setTimeout(function() {
-        cleanup(); reject(new Error('JSONP timeout'));
-      }, 45000);
-      function cleanup() {
-        clearTimeout(timer);
-        delete window[cbName];
-        if (script.parentNode) script.parentNode.removeChild(script);
-      }
-      window[cbName] = function(data) { cleanup(); resolve(data); };
-      script.onerror = function() { cleanup(); reject(new Error('JSONP error')); };
-      script.src = url + (url.indexOf('?') === -1 ? '?' : '&') + 'callback=' + cbName;
-      document.head.appendChild(script);
-    });
+  return new Promise(function(resolve, reject) {
+    var settled = false;
+    var pending = 2;
+    var lastErr;
+    function win(data) { if (!settled) { settled = true; resolve(data); } }
+    function fail(err) { lastErr = err; if (--pending === 0 && !settled) reject(lastErr); }
+
+    // ── fetch branch (no credentials) ──
+    var ctrl = window.AbortController ? new AbortController() : null;
+    var ft = ctrl ? setTimeout(function() { ctrl.abort(); }, 8000) : null;
+    fetch(url, { credentials: 'omit', mode: 'cors', signal: ctrl ? ctrl.signal : undefined })
+      .then(function(r) { clearTimeout(ft); if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(win).catch(function(e) { clearTimeout(ft); fail(e); });
+
+    // ── JSONP branch ──
+    var cbName = '_cb' + Date.now() + Math.floor(Math.random() * 1e6);
+    var script = document.createElement('script');
+    var jt = setTimeout(function() { cleanup(); fail(new Error('JSONP timeout')); }, 12000);
+    function cleanup() { clearTimeout(jt); delete window[cbName]; if (script.parentNode) script.parentNode.removeChild(script); }
+    window[cbName] = function(data) { cleanup(); win(data); };
+    script.onerror  = function() { cleanup(); fail(new Error('JSONP error')); };
+    script.src = url + (url.indexOf('?') === -1 ? '?' : '&') + 'callback=' + cbName;
+    document.head.appendChild(script);
   });
 }
 
@@ -1675,6 +1666,7 @@ var isOnline = true;
 var lastSyncTime = null;
 var syncInFlight = false;
 var lastSyncError = '';
+var hasInitialData = false;
 var reportOpen = false;
 var longPressTimer = null;
 var showPaid = false;  // hide fully-paid cards by default
@@ -2041,7 +2033,7 @@ function refreshAll() {
   if (syncInFlight) return;
   syncInFlight = true;
   setSyncState('loading');
-  showSkeletons();
+  if (!hasInitialData) showSkeletons();
 
   loadDataSnapshot().then(function(snapshot) {
     if (!snapshot || !snapshot.ok || !Array.isArray(snapshot.tenants) ||
@@ -2055,6 +2047,7 @@ function refreshAll() {
     var pJson = { ok: true, data: snapshot.data };
     applyData(tJson, eJson, pJson);
     saveCache({ t: tJson, e: eJson, p: pJson, generatedAt: snapshot.generatedAt || '' });
+    hasInitialData = true;
     lastSyncTime = Date.now();
     setConnectionWarning(false);
     setSyncState('ok');
@@ -3609,6 +3602,12 @@ function saveAllMeters() {
    AUTO REFRESH
 ═══════════════════════════════════════════════ */
 updateTodayDateIcon();
+(function() {
+  var boot = loadCache();
+  if (boot) {
+    try { applyData(boot.data.t, boot.data.e, boot.data.p); render(); hasInitialData = true; } catch(e) {}
+  }
+})();
 refreshAll();
 
 /* Refresh when user comes back to the tab/app — catches changes from other devices */
