@@ -1,4 +1,4 @@
-var CACHE_NAME = 'plusone-v32';
+var CACHE_NAME = 'plusone-v33';
 var urlsToCache = ['/offices/manifest.json', '/offices/icon.png'];
 
 self.addEventListener('install', function(event) {

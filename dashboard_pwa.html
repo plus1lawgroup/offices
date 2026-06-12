@@ -781,9 +781,13 @@ canvas#reportChart { width: 100%; height: 130px; border-radius: 8px; }
 }
 @keyframes msgFade { from { opacity: 0; } to { opacity: 1; } }
 .msg-body.open { display: flex; }
+body.notification-open { overflow: hidden; touch-action: none; }
 .msg-sheet {
   width: min(100%, 620px); max-height: min(86vh, 760px);
   overflow: auto; position: relative;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
   padding: 20px; border-radius: 24px;
   background: var(--surface-2);
   border: 1px solid rgba(255,255,255,.72);
@@ -1511,6 +1515,19 @@ canvas#reportChart { width: 100%; height: 130px; border-radius: 8px; }
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
+<!-- One global notification modal. Keeping it outside tenant cards prevents
+     card pointer/long-press handlers from firing while the message scrolls. -->
+<div class="msg-body" id="notificationModal" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="msg-sheet" id="notificationSheet">
+    <div class="msg-sheet-head">
+      <div class="msg-sheet-title" id="notificationTitle">Հաղորդագրություն</div>
+      <button class="msg-close" id="notificationClose" type="button" aria-label="Փակել">×</button>
+    </div>
+    <div class="msg-text" id="notificationText"></div>
+    <button class="copy-msg-btn" id="notificationCopy" type="button">📋 Պատճ. հաղ.</button>
+  </div>
+</div>
+
 <script>
 /* ═══════════════════════════════════════════════
    CONSTANTS & STATE
@@ -1585,6 +1602,7 @@ var syncInFlight = false;
 var reportOpen = false;
 var longPressTimer = null;
 var showPaid = false;  // hide fully-paid cards by default
+var notificationApt = '';
 
 /* ═══════════════════════════════════════════════
    UTILS
@@ -2852,6 +2870,51 @@ function copyMsg(apt) {
   } else { toast('✗ Clipboard', 'error'); }
 }
 
+function openNotification(apt) {
+  var modal = document.getElementById('notificationModal');
+  var text = makeMsg(apt);
+  if (!modal || !text) {
+    toast('⚡ Տվ. չկա', 'error');
+    return;
+  }
+  notificationApt = apt;
+  document.getElementById('notificationTitle').textContent = 'Հաղորդագրություն · Գրաս. ' + apt;
+  document.getElementById('notificationText').textContent = text;
+  document.getElementById('notificationSheet').scrollTop = 0;
+  modal.classList.add('open');
+  modal.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('notification-open');
+}
+
+function closeNotification() {
+  var modal = document.getElementById('notificationModal');
+  if (!modal || !modal.classList.contains('open')) return;
+  modal.classList.remove('open');
+  modal.setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('notification-open');
+  notificationApt = '';
+}
+
+document.getElementById('notificationClose').addEventListener('click', function(ev) {
+  ev.preventDefault();
+  ev.stopPropagation();
+  closeNotification();
+});
+document.getElementById('notificationCopy').addEventListener('click', function(ev) {
+  ev.preventDefault();
+  ev.stopPropagation();
+  if (notificationApt) copyMsg(notificationApt);
+});
+document.getElementById('notificationModal').addEventListener('click', function(ev) {
+  if (ev.target === this) closeNotification();
+});
+document.getElementById('notificationSheet').addEventListener('click', function(ev) {
+  ev.stopPropagation();
+});
+document.addEventListener('keydown', function(ev) {
+  if (ev.key === 'Escape') closeNotification();
+});
+
 /* ═══════════════════════════════════════════════
    RENDER
 ═══════════════════════════════════════════════ */
@@ -2984,8 +3047,6 @@ function render() {
     var isToday = t.day === today;
     var isOverdue = t.day > 0 && t.day < today && !isRentCovered(s.r);
     var elecDue = hasE && isElecPeriod && s.e !== 'paid';
-    var msgId = 'msg_' + t.apt.replace(/\//g, '_');
-
     // Day group header
     if (!q && curTab !== 'elec' && sortBy === 'day' && t.day !== lastDay) {
       lastDay = t.day;
@@ -3052,17 +3113,7 @@ function render() {
         '</div>' +
       '</div>' +
       (hasE ?
-        '<button class="msg-toggle" data-id="' + msgId + '">Հաղ. ▾</button>' +
-        '<div class="msg-body" id="' + msgId + '">' +
-          '<div class="msg-sheet">' +
-            '<div class="msg-sheet-head">' +
-              '<div class="msg-sheet-title">Հաղորդագրություն · Գրաս. ' + t.apt + '</div>' +
-              '<button class="msg-close" type="button" aria-label="Close notification">×</button>' +
-            '</div>' +
-            '<div class="msg-text">' + makeMsg(t.apt).replace(/</g,'&lt;') + '</div>' +
-            '<button class="copy-msg-btn" data-copy="' + t.apt + '">📋 Պատճ. հաղ.</button>' +
-          '</div>' +
-        '</div>'
+        '<button class="msg-toggle" data-message="' + t.apt + '">Հաղ. ▾</button>'
         : '<div class="no-elec">⚡ Առ. աբ.</div>');
 
     // Events
@@ -3103,47 +3154,26 @@ function render() {
       btn.addEventListener('click', function(ev) { ev.stopPropagation(); copyMsg(this.dataset.copy); });
     });
 
-    // Expand message
+    // Open the single global notification modal.
     var toggle = div.querySelector('.msg-toggle');
     if (toggle) {
-      toggle.addEventListener('click', function() {
-        var body = document.getElementById(this.dataset.id);
-        var wasOpen = body.classList.contains('open');
-        document.querySelectorAll('.msg-body.open').forEach(function(openBody) {
-          openBody.classList.remove('open');
-        });
-        document.querySelectorAll('.msg-toggle').forEach(function(openToggle) {
-          openToggle.textContent = 'Հաղ. ▾';
-        });
-        var open = !wasOpen;
-        if (open) body.classList.add('open');
-        this.textContent = open ? 'Հաղ. ▴' : 'Հաղ. ▾';
-      });
-    }
-    var messageBody = div.querySelector('.msg-body');
-    var messageClose = div.querySelector('.msg-close');
-    if (messageClose) {
-      messageClose.addEventListener('click', function() {
-        messageBody.classList.remove('open');
-        toggle.textContent = 'Հաղ. ▾';
-      });
-    }
-    if (messageBody) {
-      messageBody.addEventListener('click', function(ev) {
-        if (ev.target !== messageBody) return;
-        messageBody.classList.remove('open');
-        toggle.textContent = 'Հաղ. ▾';
+      toggle.addEventListener('click', function(ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        openNotification(this.dataset.message);
       });
     }
 
     // Long-press to edit
     div.addEventListener('pointerdown', function(ev) {
-      if (ev.target.tagName === 'BUTTON' || ev.target.tagName === 'INPUT') return;
+      if (ev.target.closest('button, input, select, textarea, a')) return;
       var apt = this.getAttribute('data-card');
       longPressTimer = setTimeout(function() { openEdit(apt); }, 600);
     });
     div.addEventListener('pointerup', function() { clearTimeout(longPressTimer); });
     div.addEventListener('pointermove', function() { clearTimeout(longPressTimer); });
+    div.addEventListener('pointercancel', function() { clearTimeout(longPressTimer); });
+    div.addEventListener('pointerleave', function() { clearTimeout(longPressTimer); });
 
     el.appendChild(div);
   });
