@@ -7,7 +7,7 @@
 /* One-time regular-Chrome repair. Incognito has no persistent worker/cache,
    so regular Chrome must explicitly detach from any old installation. */
 (function() {
-  var repairVersion = 'chrome-repair-20260612-1';
+  var repairVersion = 'chrome-repair-20260612-3';
   var repairKey = 'plusone_browser_repair';
   var alreadyRepaired = false;
 
@@ -1400,7 +1400,7 @@ body.notification-open { overflow: hidden; touch-action: none; }
     <span class="header-sub">Plus One Law Group</span>
   </div>
   <button class="header-add-btn" onclick="openAddTenant()" title="Ավելացնել վարձակալ">＋ Վարձակալ</button>
-  <button class="sync-pill" id="syncBtn" onclick="refreshAll()">
+  <button class="sync-pill" id="syncBtn" onclick="syncBtnClick()">
     <span class="sync-spin" id="syncSpinner">⟳</span>
     <span id="syncText">Բեռն...</span>
   </button>
@@ -1577,21 +1577,39 @@ var API = 'https://script.google.com/macros/s/AKfycbxN__cD8D70j5T6VrWXzrR0HdS8mm
 
 /* JSONP helper — bypasses CORS for Google Apps Script */
 function jsonp(url) {
-  return new Promise(function(resolve, reject) {
-    var cbName = '_cb' + Date.now() + Math.floor(Math.random() * 1e6);
-    var script = document.createElement('script');
-    var timer = setTimeout(function() {
-      cleanup(); reject(new Error('JSONP timeout'));
-    }, 45000);
-    function cleanup() {
-      clearTimeout(timer);
-      delete window[cbName];
-      if (script.parentNode) script.parentNode.removeChild(script);
-    }
-    window[cbName] = function(data) { cleanup(); resolve(data); };
-    script.onerror = function() { cleanup(); reject(new Error('JSONP error')); };
-    script.src = url + (url.indexOf('?') === -1 ? '?' : '&') + 'callback=' + cbName;
-    document.head.appendChild(script);
+  // Use fetch with no credentials first — this prevents Google from issuing an
+  // auth redirect when the script owner's account cookies are present in Chrome.
+  var ctrl = window.AbortController ? new AbortController() : null;
+  var fetchTimer = ctrl ? setTimeout(function() { ctrl.abort(); }, 20000) : null;
+  return fetch(url, {
+    credentials: 'omit',
+    mode: 'cors',
+    signal: ctrl ? ctrl.signal : undefined
+  })
+  .then(function(r) {
+    clearTimeout(fetchTimer);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  })
+  .catch(function() {
+    clearTimeout(fetchTimer);
+    // Fallback: classic JSONP script injection
+    return new Promise(function(resolve, reject) {
+      var cbName = '_cb' + Date.now() + Math.floor(Math.random() * 1e6);
+      var script = document.createElement('script');
+      var timer = setTimeout(function() {
+        cleanup(); reject(new Error('JSONP timeout'));
+      }, 45000);
+      function cleanup() {
+        clearTimeout(timer);
+        delete window[cbName];
+        if (script.parentNode) script.parentNode.removeChild(script);
+      }
+      window[cbName] = function(data) { cleanup(); resolve(data); };
+      script.onerror = function() { cleanup(); reject(new Error('JSONP error')); };
+      script.src = url + (url.indexOf('?') === -1 ? '?' : '&') + 'callback=' + cbName;
+      document.head.appendChild(script);
+    });
   });
 }
 
@@ -1654,6 +1672,7 @@ var availableMonths = [];
 var isOnline = true;
 var lastSyncTime = null;
 var syncInFlight = false;
+var lastSyncError = '';
 var reportOpen = false;
 var longPressTimer = null;
 var showPaid = false;  // hide fully-paid cards by default
@@ -1873,7 +1892,7 @@ function setSyncState(state) {
   btn.className = 'sync-pill ' + state;
   if (state === 'loading') { spin.style.display = ''; spin.className = 'sync-spin'; txt.textContent = '...'; }
   else if (state === 'ok')  { spin.style.display = 'none'; txt.textContent = '✓ Սինք'; }
-  else if (state === 'err') { spin.style.display = 'none'; txt.textContent = '✗ Ցանց'; }
+  else if (state === 'err') { spin.style.display = 'none'; txt.textContent = '✗ Ցանց'; btn.title = lastSyncError || ''; }
   if (lastSyncTime) {
     document.getElementById('lastSync').textContent = timeAgo(lastSyncTime);
   }
@@ -2007,6 +2026,15 @@ function applyData(tJson, eJson, pJson) {
   }
 }
 
+function syncBtnClick() {
+  var btn = document.getElementById('syncBtn');
+  if (btn && btn.classList.contains('err') && lastSyncError) {
+    toast('✗ ' + lastSyncError, 'error');
+    return;
+  }
+  refreshAll();
+}
+
 function refreshAll() {
   if (syncInFlight) return;
   syncInFlight = true;
@@ -2032,19 +2060,19 @@ function refreshAll() {
     renderChart();
     syncInFlight = false;
   }).catch(function(err) {
+    syncInFlight = false;
     console.error(err);
+    lastSyncError = String(err && err.message ? err.message : err);
     setConnectionWarning(true);
     setSyncState('err');
     var c = loadCache();
     if (c) {
-      applyData(c.data.t, c.data.e, c.data.p);
-      render();
+      try { applyData(c.data.t, c.data.e, c.data.p); render(); } catch(e) {}
       var cachedAt = c.ts ? formatDateTime(new Date(c.ts).toISOString()) : '';
       toast('📦 Offline data' + (cachedAt ? ' · ' + cachedAt : ''), 'error');
     } else {
       document.getElementById('list').innerHTML = '<div class="empty"><div class="empty-icon">↻</div>Չհաջողվեց բեռնել · սեղմեք Սինք</div>';
     }
-    syncInFlight = false;
   });
 }
 
