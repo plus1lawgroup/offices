@@ -1432,10 +1432,8 @@ body.notification-open { overflow: hidden; touch-action: none; }
     <button class="chip active" data-tab="all">Բոլորը</button>
     <button class="chip" data-tab="deposit">⟳ Դեպոզիտ</button>
     <button class="chip" data-tab="meter">⚡ Electricity</button>
-  </div>
-  <div class="paid-toggle-bar" id="paidToggleBar" style="display:none">
-    <button class="paid-toggle-btn" id="paidToggleBtn" onclick="toggleShowPaid()">
-      <span id="paidToggleIcon">👁</span>
+    <button class="chip paid-toggle-chip" id="paidToggleBtn" onclick="toggleShowPaid()" style="display:none">
+      <span id="paidToggleIcon"></span>
       <span id="paidToggleLabel">Ցույց տալ վճ.</span>
       <span class="paid-count-badge" id="paidCountBadge">0</span>
     </button>
@@ -3026,17 +3024,16 @@ function render() {
   var visibleList = showPaid ? list : list.filter(function(t) { return !isFullyPaid(t); });
 
   // Update the toggle bar
-  var toggleBar = document.getElementById('paidToggleBar');
-  var toggleBtn = document.getElementById('paidToggleBtn');
+  var toggleBtn  = document.getElementById('paidToggleBtn');
   var toggleLabel = document.getElementById('paidToggleLabel');
   var toggleIcon  = document.getElementById('paidToggleIcon');
   var countBadge  = document.getElementById('paidCountBadge');
   if (paidCount > 0 && curTab !== 'unpaid') {
-    toggleBar.style.display = '';
+    toggleBtn.style.display = '';
     countBadge.textContent  = paidCount;
     if (showPaid) {
       toggleBtn.classList.add('active');
-      toggleIcon.textContent  = '✓';
+      toggleIcon.textContent  = '✓ ';
       toggleLabel.textContent = 'Թաքցնել վճ.';
     } else {
       toggleBtn.classList.remove('active');
@@ -3044,7 +3041,7 @@ function render() {
       toggleLabel.textContent = 'Ցույց տալ վճ.';
     }
   } else {
-    toggleBar.style.display = 'none';
+    toggleBtn.style.display = 'none';
   }
 
   // Sort (operate on visibleList)
