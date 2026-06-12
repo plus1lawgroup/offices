@@ -1582,6 +1582,18 @@ function loadDataSnapshot() {
       if (!p || !p.ok || !p.data) throw new Error('Payment sync failed');
       result.data = p.data;
       return result;
+    })
+    .catch(function(sequentialError) {
+      // A single combined request is a useful fallback on mobile networks
+      // that interrupt one of the three smaller JSONP requests.
+      return jsonpRetry(API + '?action=getSnapshot&_=' + Date.now(), 2)
+        .then(function(snapshot) {
+          if (!snapshot || !snapshot.ok || !Array.isArray(snapshot.tenants) ||
+              !snapshot.electricity || !snapshot.data) {
+            throw sequentialError;
+          }
+          return snapshot;
+        });
     });
 }
 var CACHE_KEY = 'plusone_snapshot_v4';
@@ -1596,7 +1608,9 @@ var curTab = 'all';
 var editingApt = null;
 var modalMode = 'edit';
 var availableMonths = [];
-var isOnline = navigator.onLine;
+// navigator.onLine is unreliable on Android mobile data. Network state is
+// determined by real API requests instead.
+var isOnline = true;
 var lastSyncTime = null;
 var syncInFlight = false;
 var reportOpen = false;
@@ -1794,19 +1808,18 @@ function loadCache() {
 }
 
 function updateOnlineStatus() {
-  isOnline = navigator.onLine;
-  var banner = document.getElementById('offlineBanner');
-  if (!isOnline) {
-    banner.classList.add('show');
-    document.body.classList.add('offline');
-  } else {
-    banner.classList.remove('show');
-    document.body.classList.remove('offline');
-  }
+  isOnline = true;
+  setConnectionWarning(false);
 }
 
-window.addEventListener('online', function() { updateOnlineStatus(); refreshAll(); });
-window.addEventListener('offline', updateOnlineStatus);
+function setConnectionWarning(show) {
+  var banner = document.getElementById('offlineBanner');
+  if (!banner) return;
+  banner.classList.toggle('show', !!show);
+  document.body.classList.toggle('offline', !!show);
+}
+
+window.addEventListener('online', function() { refreshAll(); });
 updateOnlineStatus();
 
 /* ═══════════════════════════════════════════════
@@ -1959,18 +1972,6 @@ function refreshAll() {
   setSyncState('loading');
   showSkeletons();
 
-  if (!isOnline) {
-    var c = loadCache();
-    if (c) {
-      applyData(c.data.t, c.data.e, c.data.p);
-      render();
-      toast('📦 Կեշ', 'success');
-    }
-    setSyncState('err');
-    syncInFlight = false;
-    return;
-  }
-
   loadDataSnapshot().then(function(snapshot) {
     if (!snapshot || !snapshot.ok || !Array.isArray(snapshot.tenants) ||
         !snapshot.electricity || typeof snapshot.electricity !== 'object' ||
@@ -1984,12 +1985,14 @@ function refreshAll() {
     applyData(tJson, eJson, pJson);
     saveCache({ t: tJson, e: eJson, p: pJson, generatedAt: snapshot.generatedAt || '' });
     lastSyncTime = Date.now();
+    setConnectionWarning(false);
     setSyncState('ok');
     render();
     renderChart();
     syncInFlight = false;
   }).catch(function(err) {
     console.error(err);
+    setConnectionWarning(true);
     setSyncState('err');
     var c = loadCache();
     if (c) {
@@ -1998,7 +2001,7 @@ function refreshAll() {
       var cachedAt = c.ts ? formatDateTime(new Date(c.ts).toISOString()) : '';
       toast('📦 Offline data' + (cachedAt ? ' · ' + cachedAt : ''), 'error');
     } else {
-      document.getElementById('list').innerHTML = '<div class="empty"><div class="empty-icon">📵</div>Ցանցը անջատ է</div>';
+      document.getElementById('list').innerHTML = '<div class="empty"><div class="empty-icon">↻</div>Չհաջողվեց բեռնել · սեղմեք Սինք</div>';
     }
     syncInFlight = false;
   });
@@ -2008,7 +2011,6 @@ function reloadForMonth() {
   if (syncInFlight) return;
   syncInFlight = true;
   setSyncState('loading');
-  if (!isOnline) { render(); setSyncState('err'); syncInFlight = false; return; }
   loadDataSnapshot().then(function(snapshot) {
     if (!snapshot || !snapshot.ok || !Array.isArray(snapshot.tenants) ||
         !snapshot.electricity || !snapshot.data) throw new Error('Incomplete data snapshot');
@@ -2018,11 +2020,13 @@ function reloadForMonth() {
     applyData(tJson, eJson, pJson);
     saveCache({ t: tJson, e: eJson, p: pJson, generatedAt: snapshot.generatedAt || '' });
     lastSyncTime = Date.now();
+    setConnectionWarning(false);
     setSyncState('ok');
     render();
     renderChart();
     syncInFlight = false;
   }).catch(function() {
+    setConnectionWarning(true);
     setSyncState('err');
     toast('Sync failed · showing unchanged data', 'error');
     render();
@@ -3538,7 +3542,7 @@ refreshAll();
 
 /* Refresh when user comes back to the tab/app — catches changes from other devices */
 document.addEventListener('visibilitychange', function() {
-  if (document.visibilityState === 'visible' && isOnline) {
+  if (document.visibilityState === 'visible') {
     var secondsAway = lastSyncTime ? (Date.now() - lastSyncTime) / 1000 : Infinity;
     // Only re-fetch if away for more than 2 minutes — avoids refresh on quick tab switches
     if (secondsAway > 120) refreshAll();
@@ -3546,7 +3550,7 @@ document.addEventListener('visibilitychange', function() {
 });
 
 /* Safety-net background refresh every 10 minutes — far less intrusive */
-setInterval(function() { if (isOnline && document.visibilityState === 'visible') refreshAll(); }, 600000);
+setInterval(function() { if (document.visibilityState === 'visible') refreshAll(); }, 600000);
 
 /* Keep the "X min ago" label ticking */
 setInterval(function() {
