@@ -1367,6 +1367,7 @@ body.notification-open { overflow: hidden; touch-action: none; }
   .header-logo { width: 38px; height: 38px; }
   .header-title { font-size: 15px; }
   .header-add-btn { font-size: 11px; padding: 7px 10px; }
+  .add-btn-label { display: none; }
   .sticky-inner { padding-top: 10px; }
   .wrap { padding-top: 12px; padding-bottom: 28px; }
   .stat-card { min-height: 104px; padding: 14px; }
@@ -1404,7 +1405,7 @@ body.notification-open { overflow: hidden; touch-action: none; }
     <span class="header-name">Գրասենյակներ</span>
     <span class="header-sub">Plus One Law Group</span>
   </div>
-  <button class="header-add-btn" onclick="openAddTenant()" title="Ավելացնել վարձակալ">＋ Վարձակալ</button>
+  <button class="header-add-btn" onclick="openAddTenant()" title="Ավելացնել վարձակալ">＋<span class="add-btn-label"> Վարձակալ</span></button>
   <button class="sync-pill" id="syncBtn" onclick="syncBtnClick()">
     <span class="sync-spin" id="syncSpinner">⟳</span>
     <span id="syncText">Բեռն...</span>
