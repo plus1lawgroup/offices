@@ -1,7 +1,7 @@
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //  PLUS ONE LAW GROUP â€” Google Apps Script Backend
 //  Sheets: tenants Â· MeterData Â· Payments
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 const SHEETS = {
   TENANTS:     'tenants',
@@ -50,6 +50,7 @@ function doGet(e) {
     });
     if (action === 'update')        return json(e, updatePayment_(e.parameter));
     if (action === 'saveMeter')     return json(e, saveMeter_(e.parameter));
+    if (action === 'updateMeterRecord') return json(e, updateMeterRecord_(e.parameter));
     if (action === 'repairMeterHistory') return json(e, repairMeterHistory_(e.parameter));
     if (action === 'deletePayment') return json(e, deletePayment_(e.parameter));
     if (action === 'updateTenant')  return json(e, updateTenant_(e.parameter));
@@ -86,7 +87,7 @@ function getSheet_(name, createIfMissing) {
 // Normalise header name for comparison. Keep Armenian letters, remove only
 // spacing and punctuation so "Rent Amount" and "RentAmount" still match.
 function norm_(value) {
-  return String(value || '').toLowerCase().replace(/[\s._\-()\/\\:;,'"Â«Â»ÕÕžÕœÕ›]+/g, '');
+  return String(value || '').toLowerCase().replace(/[\s._\-()\/\\:;,'"Â«Â»ÕÕžÕœÕ›]+/g, '');
 }
 
 function headerMap_(headers) {
@@ -122,7 +123,7 @@ function officeKey_(value) {
 
 function num_(value) {
   if (value === null || value === undefined || value === '') return 0;
-  return Number(String(value).replace(/[, Ö\s]/g, '')) || 0;
+  return Number(String(value).replace(/[, Ö\s]/g, '')) || 0;
 }
 
 function bool_(value) {
@@ -198,26 +199,26 @@ function getTenants_() {
       rent:     num_(firstNonBlank_(row, map, ['Վարձ','Rent','Rent Amount','ÕŽÕ¡Ö€Õ±'], 0)),
       internet: bool_(firstNonBlank_(row, map, ['Ինտերնետ','Internet','Net','Ô»Õ¶Õ¿Õ¥Ö€Õ¶Õ¥Õ¿'], false)),
       skipPreviousUtilities: bool_(firstNonBlank_(row, map, ['Նախորդ կոմունալը չի վճարում','Skip Previous Utilities','Õ†Õ¡Õ­Õ¸Ö€Õ¤ Õ¯Õ¸Õ´Õ¸Ö‚Õ¶Õ¡Õ¬Õ¨ Õ¹Õ« Õ¾Õ³Õ¡Ö€Õ¸Ö‚Õ´'], false)),
-      startMonth: String(firstNonBlank_(row, map, ['Սկզբնական ամիս','Start Month','Move In Month','First Month','ÕÕ¯Õ¦Õ¢Õ¶Õ¡Õ¯Õ¡Õ¶ Õ¡Õ´Õ«Õ½'], '')).trim(),
-      entityType: String(firstNonBlank_(row, map, ['Տեսակ','Entity Type','ÕÕ¥Õ½Õ¡Õ¯'], '')).trim(),
+      startMonth: String(firstNonBlank_(row, map, ['Սկզբնական ամիս','Start Month','Move In Month','First Month','ÕÕ¯Õ¦Õ¢Õ¶Õ¡Õ¯Õ¡Õ¶ Õ¡Õ´Õ«Õ½'], '')).trim(),
+      entityType: String(firstNonBlank_(row, map, ['Տեսակ','Entity Type','ÕÕ¥Õ½Õ¡Õ¯'], '')).trim(),
       physicalName: String(firstNonBlank_(row, map, ['Ֆիզ. անձի անուն','Physical Name','Õ–Õ«Õ¦. Õ¡Õ¶Õ±Õ« Õ¡Õ¶Õ¸Ö‚Õ¶'], '')).trim(),
       physicalPassport: String(firstNonBlank_(row, map, ['Ֆիզ. անձի անձնագիր','Physical Passport','Õ–Õ«Õ¦. Õ¡Õ¶Õ±Õ« Õ¡Õ¶Õ±Õ¶Õ¡Õ£Õ«Ö€'], '')).trim(),
-      physicalAddress: String(firstNonBlank_(row, map, ['Ֆիզ. անձի հասցե','Physical Address','Õ–Õ«Õ¦. Õ¡Õ¶Õ±Õ« Õ°Õ¡Õ½ÖÕ¥'], '')).trim(),
+      physicalAddress: String(firstNonBlank_(row, map, ['Ֆիզ. անձի հասցե','Physical Address','Õ–Õ«Õ¦. Õ¡Õ¶Õ±Õ« Õ°Õ¡Õ½ÖÕ¥'], '')).trim(),
       physicalIssuedFrom: String(firstNonBlank_(row, map, ['Ֆիզ. անձի տրված է','Physical Issued From','Õ–Õ«Õ¦. Õ¡Õ¶Õ±Õ« Õ¿Ö€Õ¾Õ¡Õ® Õ§'], '')).trim(),
       physicalValidUntil: firstNonBlank_(row, map, ['Ֆիզ. անձի վավեր է մինչև','Physical Valid Until','Õ–Õ«Õ¦. Õ¡Õ¶Õ±Õ« Õ¾Õ¡Õ¾Õ¥Ö€ Õ§ Õ´Õ«Õ¶Õ¹Ö‡'], ''),
       legalName: String(firstNonBlank_(row, map, ['Իրավ. անձի անվանում','Legal Name','Ô»Ö€Õ¡Õ¾. Õ¡Õ¶Õ±Õ« Õ¡Õ¶Õ¾Õ¡Õ¶Õ¸Ö‚Õ´'], '')).trim(),
       hvhh: String(firstNonBlank_(row, map, ['ՀՎՀՀ','HVHH','Tax ID','Õ€ÕŽÕ€Õ€'], '')).trim(),
-      legalAddress: String(firstNonBlank_(row, map, ['Իրավ. հասցե','Legal Address','Ô»Ö€Õ¡Õ¾. Õ°Õ¡Õ½ÖÕ¥'], '')).trim(),
-      registrationNumber: String(firstNonBlank_(row, map, ['Գրանցման համար','Registration Number','Ô³Ö€Õ¡Õ¶ÖÕ´Õ¡Õ¶ Õ°Õ¡Õ´Õ¡Ö€'], '')).trim(),
-      ceoName: String(firstNonBlank_(row, map, ['Տնօրենի անուն','CEO Name','ÕÕ¶Ö…Ö€Õ¥Õ¶Õ« Õ¡Õ¶Õ¸Ö‚Õ¶'], '')).trim(),
-      ceoPassport: String(firstNonBlank_(row, map, ['Տնօրենի անձնագիր','CEO Passport','ÕÕ¶Ö…Ö€Õ¥Õ¶Õ« Õ¡Õ¶Õ±Õ¶Õ¡Õ£Õ«Ö€'], '')).trim(),
-      ceoAddress: String(firstNonBlank_(row, map, ['Տնօրենի հասցե','CEO Address','ÕÕ¶Ö…Ö€Õ¥Õ¶Õ« Õ°Õ¡Õ½ÖÕ¥'], '')).trim(),
-      ceoIssuedFrom: String(firstNonBlank_(row, map, ['Տնօրենի տրված է','CEO Issued From','ÕÕ¶Ö…Ö€Õ¥Õ¶Õ« Õ¿Ö€Õ¾Õ¡Õ® Õ§'], '')).trim(),
-      ceoValidUntil: firstNonBlank_(row, map, ['Տնօրենի վավեր է մինչև','CEO Valid Until','ÕÕ¶Ö…Ö€Õ¥Õ¶Õ« Õ¾Õ¡Õ¾Õ¥Ö€ Õ§ Õ´Õ«Õ¶Õ¹Ö‡'], ''),
-      startDate: firstNonBlank_(row, map, ['Սկիզբ','Start Date','ÕÕ¯Õ«Õ¦Õ¢'], ''),
+      legalAddress: String(firstNonBlank_(row, map, ['Իրավ. հասցե','Legal Address','Ô»Ö€Õ¡Õ¾. Õ°Õ¡Õ½ÖÕ¥'], '')).trim(),
+      registrationNumber: String(firstNonBlank_(row, map, ['Գրանցման համար','Registration Number','Ô³Ö€Õ¡Õ¶ÖÕ´Õ¡Õ¶ Õ°Õ¡Õ´Õ¡Ö€'], '')).trim(),
+      ceoName: String(firstNonBlank_(row, map, ['Տնօրենի անուն','CEO Name','ÕÕ¶Ö…Ö€Õ¥Õ¶Õ« Õ¡Õ¶Õ¸Ö‚Õ¶'], '')).trim(),
+      ceoPassport: String(firstNonBlank_(row, map, ['Տնօրենի անձնագիր','CEO Passport','ÕÕ¶Ö…Ö€Õ¥Õ¶Õ« Õ¡Õ¶Õ±Õ¶Õ¡Õ£Õ«Ö€'], '')).trim(),
+      ceoAddress: String(firstNonBlank_(row, map, ['Տնօրենի հասցե','CEO Address','ÕÕ¶Ö…Ö€Õ¥Õ¶Õ« Õ°Õ¡Õ½ÖÕ¥'], '')).trim(),
+      ceoIssuedFrom: String(firstNonBlank_(row, map, ['Տնօրենի տրված է','CEO Issued From','ÕÕ¶Ö…Ö€Õ¥Õ¶Õ« Õ¿Ö€Õ¾Õ¡Õ® Õ§'], '')).trim(),
+      ceoValidUntil: firstNonBlank_(row, map, ['Տնօրենի վավեր է մինչև','CEO Valid Until','ÕÕ¶Ö…Ö€Õ¥Õ¶Õ« Õ¾Õ¡Õ¾Õ¥Ö€ Õ§ Õ´Õ«Õ¶Õ¹Ö‡'], ''),
+      startDate: firstNonBlank_(row, map, ['Սկիզբ','Start Date','ÕÕ¯Õ«Õ¦Õ¢'], ''),
       endDate: firstNonBlank_(row, map, ['Ավարտ','End Date','Ô±Õ¾Õ¡Ö€Õ¿'], ''),
       paymentDate: firstNonBlank_(row, map, ['Վճարման օր','Payment Date','ÕŽÕ³Õ¡Ö€Õ´Õ¡Õ¶ Ö…Ö€'], ''),
-      createdAt: firstNonBlank_(row, map, ['Ստեղծվել է','Created At','ÕÕ¿Õ¥Õ²Õ®Õ¾Õ¥Õ¬ Õ§'], '')
+      createdAt: firstNonBlank_(row, map, ['Ստեղծվել է','Created At','ÕÕ¿Õ¥Õ²Õ®Õ¾Õ¥Õ¬ Õ§'], '')
     }));
 }
 
@@ -283,7 +284,7 @@ function getElectricity_() {
   const result = {};
   values.slice(1).forEach(row => {
     const apt = officeKey_(firstNonBlank_(row, map,
-      ['Office','Ô³Ñ€Ð°ÑÐµÐ½rak','Apt','Apartment','Room'], ''));
+      ['Office','Ô³Ñ€Ð°ÑÐµÐ½rak','Apt','Apartment','Room'], ''));
     if (!apt) return;
     const month    = String(first_(row, map, ['Month','Ô±Õ´is'], '')).trim();
     if (!month) return;
@@ -414,6 +415,99 @@ function saveMeter_(p) {
            t1current: t1cur, t2current: t2cur,
            totalPrevious, kwhDay, kwhNight, amdDay, amdNight, amdTotal,
            previousMonth, previousAssumed };
+}
+
+// Full utility-card edit. Unlike saveMeter_, this intentionally accepts
+// corrected previous readings and serial numbers for the selected month.
+function updateMeterRecord_(p) {
+  const sh = meterSheet_();
+  const headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+  const map = headerMap_(headers);
+  const month = String(p.month || '').trim();
+  const apt = officeKey_(p.apt);
+  if (!month || !apt) throw new Error('Missing month or apt');
+
+  ['t1prev', 't2prev', 't1current', 't2current'].forEach(key => {
+    if (String(p[key] === undefined ? '' : p[key]).trim() === '') {
+      throw new Error('All previous and current readings are required');
+    }
+  });
+
+  const serial = String(p.serial || '').trim();
+  const t1prev = num_(p.t1prev);
+  const t2prev = num_(p.t2prev);
+  const t1cur = num_(p.t1current);
+  const t2cur = num_(p.t2current);
+  const internet = bool_(p.internet);
+  if (t1cur < t1prev || t2cur < t2prev) {
+    throw new Error('Current readings cannot be below previous readings');
+  }
+
+  let rowNumber = 0;
+  if (sh.getLastRow() >= 2) {
+    const values = sh.getRange(2, 1, sh.getLastRow() - 1, sh.getLastColumn()).getValues();
+    for (let i = 0; i < values.length; i++) {
+      const rowMonth = String(first_(values[i], map, ['Month'], '')).trim();
+      const rowApt = officeKey_(firstNonBlank_(values[i], map,
+        ['Office','Apt','Apartment','Room'], ''));
+      if (rowMonth === month && rowApt === apt) { rowNumber = i + 2; break; }
+    }
+  }
+
+  const numCols = sh.getLastColumn();
+  const rowData = rowNumber
+    ? sh.getRange(rowNumber, 1, 1, numCols).getValues()[0].slice()
+    : new Array(numCols).fill('');
+  const kwhDay = t1cur - t1prev;
+  const kwhNight = t2cur - t2prev;
+  const amdDay = Math.round(kwhDay * AMD_PER_KWH_DAY);
+  const amdNight = Math.round(kwhNight * AMD_PER_KWH_NIGHT);
+  const amdTotal = amdDay + amdNight;
+
+  function setCol(name, value) {
+    const idx = map[norm_(name)];
+    if (idx !== undefined) rowData[idx] = value;
+  }
+  setCol('Office', apt);
+  setCol('Serial', serial);
+  setCol('TotalPrevious', t1prev + t2prev);
+  setCol('T1prev', t1prev);
+  setCol('T2prev', t2prev);
+  setCol('T1current', t1cur);
+  setCol('T2current', t2cur);
+  setCol('KwhDay', kwhDay);
+  setCol('KwhNight', kwhNight);
+  setCol('AMDDay', amdDay);
+  setCol('AMDNight', amdNight);
+  setCol('AMDTotal', amdTotal);
+  setCol('Internet', internet ? 'yes' : 'no');
+  setCol('Month', month);
+  setCol('PreviousMonth', String(p.previousMonth || '').trim());
+  setCol('PreviousAssumed', bool_(p.previousAssumed) ? 'yes' : 'no');
+  setCol('EnteredAt', new Date());
+
+  if (rowNumber) sh.getRange(rowNumber, 1, 1, numCols).setValues([rowData]);
+  else sh.getRange(sh.getLastRow() + 1, 1, 1, numCols).setValues([rowData]);
+
+  // Keep the tenant-level Internet flag synchronized with the utility card.
+  const tenantSheet = tenantsSheet_();
+  const tenantValues = tenantSheet.getDataRange().getValues();
+  const tenantMap = headerMap_(tenantValues[0]);
+  for (let i = 1; i < tenantValues.length; i++) {
+    const tenantApt = officeKey_(firstNonBlank_(tenantValues[i], tenantMap,
+      ['Գրասենյակ','Գրս','Office','Apt','Apartment','Room','Ô³Ö€Õ¡Õ½Õ¥Õ¶ÕµÕ¡Õ¯','Ô³Ö€Õ½'], ''));
+    if (tenantApt === apt) {
+      setTenantCell_(tenantSheet, i + 1, tenantMap,
+        ['Ինտերնետ','Internet','Net','Ô»Õ¶Õ¿Õ¥Ö€Õ¶Õ¥Õ¿'], internet ? 'yes' : 'no');
+      break;
+    }
+  }
+
+  return {
+    ok: true, apt, month, serial, t1prev, t2prev,
+    t1current: t1cur, t2current: t2cur, totalPrevious: t1prev + t2prev,
+    kwhDay, kwhNight, amdDay, amdNight, amdTotal, internet
+  };
 }
 
 function meterMonthIndex_(month) {
@@ -710,29 +804,29 @@ function updateTenant_(p) {
   setTenantCell_(sh, rowNumber, map, ['Ինտերնետ','Internet','Net','Ô»Õ¶Õ¿Õ¥Ö€Õ¶Õ¥Õ¿'],              bool_(p.internet) ? 'yes' : 'no');
   setTenantCell_(sh, rowNumber, map, ['Ակտիվ','Active','Status','Ô±Õ¯Õ¿Õ«Õ¾'],                         String(p.active || 'yes').toLowerCase() === 'no' ? 'no' : 'yes');
   setTenantCell_(sh, rowNumber, map, ['Նախորդ կոմունալը չի վճարում','Skip Previous Utilities','Õ†Õ¡Õ­Õ¸Ö€Õ¤ Õ¯Õ¸Õ´Õ¸Ö‚Õ¶Õ¡Õ¬Õ¨ Õ¹Õ« Õ¾Õ³Õ¡Ö€Õ¸Ö‚Õ´'], bool_(p.skipPreviousUtilities) ? 'yes' : 'no');
-  if (isNew || p.startMonth) setTenantCell_(sh, rowNumber, map, ['Սկզբնական ամիս','Start Month','Move In Month','First Month','ÕÕ¯Õ¦Õ¢Õ¶Õ¡Õ¯Õ¡Õ¶ Õ¡Õ´Õ«Õ½'], p.startMonth || '');
+  if (isNew || p.startMonth) setTenantCell_(sh, rowNumber, map, ['Սկզբնական ամիս','Start Month','Move In Month','First Month','ÕÕ¯Õ¦Õ¢Õ¶Õ¡Õ¯Õ¡Õ¶ Õ¡Õ´Õ«Õ½'], p.startMonth || '');
   const entityType = p.entityType || 'physical';
   const displayName = p.name || p.physicalName || p.legalName || '';
-  setTenantCell_(sh, rowNumber, map, ['Տեսակ','Entity Type','ÕÕ¥Õ½Õ¡Õ¯'], entityType);
+  setTenantCell_(sh, rowNumber, map, ['Տեսակ','Entity Type','ÕÕ¥Õ½Õ¡Õ¯'], entityType);
   setTenantCell_(sh, rowNumber, map, ['Ֆիզ. անձի անուն','Physical Name','Õ–Õ«Õ¦. Õ¡Õ¶Õ±Õ« Õ¡Õ¶Õ¸Ö‚Õ¶'], entityType === 'physical' ? (p.physicalName || displayName) : (p.physicalName || ''));
   setTenantCell_(sh, rowNumber, map, ['Ֆիզ. անձի անձնագիր','Physical Passport','Õ–Õ«Õ¦. Õ¡Õ¶Õ±Õ« Õ¡Õ¶Õ±Õ¶Õ¡Õ£Õ«Ö€'], p.physicalPassport || '');
-  setTenantCell_(sh, rowNumber, map, ['Ֆիզ. անձի հասցե','Physical Address','Õ–Õ«Õ¦. Õ¡Õ¶Õ±Õ« Õ°Õ¡Õ½ÖÕ¥'], p.physicalAddress || '');
+  setTenantCell_(sh, rowNumber, map, ['Ֆիզ. անձի հասցե','Physical Address','Õ–Õ«Õ¦. Õ¡Õ¶Õ±Õ« Õ°Õ¡Õ½ÖÕ¥'], p.physicalAddress || '');
   setTenantCell_(sh, rowNumber, map, ['Ֆիզ. անձի տրված է','Physical Issued From','Õ–Õ«Õ¦. Õ¡Õ¶Õ±Õ« Õ¿Ö€Õ¾Õ¡Õ® Õ§'], p.physicalIssuedFrom || '');
   setTenantCell_(sh, rowNumber, map, ['Ֆիզ. անձի վավեր է մինչև','Physical Valid Until','Õ–Õ«Õ¦. Õ¡Õ¶Õ±Õ« Õ¾Õ¡Õ¾Õ¥Ö€ Õ§ Õ´Õ«Õ¶Õ¹Ö‡'], dateOrBlank_(p.physicalValidUntil));
   setTenantCell_(sh, rowNumber, map, ['Իրավ. անձի անվանում','Legal Name','Ô»Ö€Õ¡Õ¾. Õ¡Õ¶Õ±Õ« Õ¡Õ¶Õ¾Õ¡Õ¶Õ¸Ö‚Õ´'], entityType === 'legal' ? (p.legalName || displayName) : (p.legalName || ''));
   setTenantCell_(sh, rowNumber, map, ['ՀՎՀՀ','HVHH','Tax ID','Õ€ÕŽÕ€Õ€'], p.hvhh || '');
-  setTenantCell_(sh, rowNumber, map, ['Իրավ. հասցե','Legal Address','Ô»Ö€Õ¡Õ¾. Õ°Õ¡Õ½ÖÕ¥'], p.legalAddress || '');
-  setTenantCell_(sh, rowNumber, map, ['Գրանցման համար','Registration Number','Ô³Ö€Õ¡Õ¶ÖÕ´Õ¡Õ¶ Õ°Õ¡Õ´Õ¡Ö€'], p.registrationNumber || '');
-  setTenantCell_(sh, rowNumber, map, ['Տնօրենի անուն','CEO Name','ÕÕ¶Ö…Ö€Õ¥Õ¶Õ« Õ¡Õ¶Õ¸Ö‚Õ¶'], p.ceoName || '');
-  setTenantCell_(sh, rowNumber, map, ['Տնօրենի անձնագիր','CEO Passport','ÕÕ¶Ö…Ö€Õ¥Õ¶Õ« Õ¡Õ¶Õ±Õ¶Õ¡Õ£Õ«Ö€'], p.ceoPassport || '');
-  setTenantCell_(sh, rowNumber, map, ['Տնօրենի հասցե','CEO Address','ÕÕ¶Ö…Ö€Õ¥Õ¶Õ« Õ°Õ¡Õ½ÖÕ¥'], p.ceoAddress || '');
-  setTenantCell_(sh, rowNumber, map, ['Տնօրենի տրված է','CEO Issued From','ÕÕ¶Ö…Ö€Õ¥Õ¶Õ« Õ¿Ö€Õ¾Õ¡Õ® Õ§'], p.ceoIssuedFrom || '');
-  setTenantCell_(sh, rowNumber, map, ['Տնօրենի վավեր է մինչև','CEO Valid Until','ÕÕ¶Ö…Ö€Õ¥Õ¶Õ« Õ¾Õ¡Õ¾Õ¥Ö€ Õ§ Õ´Õ«Õ¶Õ¹Ö‡'], dateOrBlank_(p.ceoValidUntil));
-  setTenantCell_(sh, rowNumber, map, ['Սկիզբ','Start Date','ÕÕ¯Õ«Õ¦Õ¢'], dateOrBlank_(p.startDate));
+  setTenantCell_(sh, rowNumber, map, ['Իրավ. հասցե','Legal Address','Ô»Ö€Õ¡Õ¾. Õ°Õ¡Õ½ÖÕ¥'], p.legalAddress || '');
+  setTenantCell_(sh, rowNumber, map, ['Գրանցման համար','Registration Number','Ô³Ö€Õ¡Õ¶ÖÕ´Õ¡Õ¶ Õ°Õ¡Õ´Õ¡Ö€'], p.registrationNumber || '');
+  setTenantCell_(sh, rowNumber, map, ['Տնօրենի անուն','CEO Name','ÕÕ¶Ö…Ö€Õ¥Õ¶Õ« Õ¡Õ¶Õ¸Ö‚Õ¶'], p.ceoName || '');
+  setTenantCell_(sh, rowNumber, map, ['Տնօրենի անձնագիր','CEO Passport','ÕÕ¶Ö…Ö€Õ¥Õ¶Õ« Õ¡Õ¶Õ±Õ¶Õ¡Õ£Õ«Ö€'], p.ceoPassport || '');
+  setTenantCell_(sh, rowNumber, map, ['Տնօրենի հասցե','CEO Address','ÕÕ¶Ö…Ö€Õ¥Õ¶Õ« Õ°Õ¡Õ½ÖÕ¥'], p.ceoAddress || '');
+  setTenantCell_(sh, rowNumber, map, ['Տնօրենի տրված է','CEO Issued From','ÕÕ¶Ö…Ö€Õ¥Õ¶Õ« Õ¿Ö€Õ¾Õ¡Õ® Õ§'], p.ceoIssuedFrom || '');
+  setTenantCell_(sh, rowNumber, map, ['Տնօրենի վավեր է մինչև','CEO Valid Until','ÕÕ¶Ö…Ö€Õ¥Õ¶Õ« Õ¾Õ¡Õ¾Õ¥Ö€ Õ§ Õ´Õ«Õ¶Õ¹Ö‡'], dateOrBlank_(p.ceoValidUntil));
+  setTenantCell_(sh, rowNumber, map, ['Սկիզբ','Start Date','ÕÕ¯Õ«Õ¦Õ¢'], dateOrBlank_(p.startDate));
   setTenantCell_(sh, rowNumber, map, ['Ավարտ','End Date','Ô±Õ¾Õ¡Ö€Õ¿'], dateOrBlank_(p.endDate));
   setTenantCell_(sh, rowNumber, map, ['Վճարման օր','Payment Date','ÕŽÕ³Õ¡Ö€Õ´Õ¡Õ¶ Ö…Ö€'], p.paymentDate || p.day || '');
-  if (isNew) setTenantCell_(sh, rowNumber, map, ['Ստեղծվել է','Created At','ÕÕ¿Õ¥Õ²Õ®Õ¾Õ¥Õ¬ Õ§'], new Date());
-  setTenantCell_(sh, rowNumber, map, ['Թարմացվել է','Updated At','Ô¹Õ¡Ö€Õ´Õ¡ÖÕ¾Õ¥Õ¬ Õ§'], new Date());
+  if (isNew) setTenantCell_(sh, rowNumber, map, ['Ստեղծվել է','Created At','ÕÕ¿Õ¥Õ²Õ®Õ¾Õ¥Õ¬ Õ§'], new Date());
+  setTenantCell_(sh, rowNumber, map, ['Թարմացվել է','Updated At','Ô¹Õ¡Ö€Õ´Õ¡ÖÕ¾Õ¥Õ¬ Õ§'], new Date());
 
   return { ok: true };
 }

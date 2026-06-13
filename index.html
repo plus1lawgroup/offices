@@ -1358,6 +1358,13 @@ body.notification-open { overflow: hidden; touch-action: none; }
   font-size: 12px; font-weight: 850; cursor: pointer;
 }
 .electricity-save.saving { opacity: .55; pointer-events: none; }
+.electricity-edit {
+  min-width: 42px; padding: 10px 12px; border-radius: 10px;
+  border: 1px solid var(--border); background: #fff; color: var(--ink-2);
+  font-size: 15px; font-weight: 850; cursor: pointer;
+  box-shadow: var(--sh-sm);
+}
+.electricity-edit:hover { border-color: var(--sage); color: var(--forest); }
 .electricity-card.is-paid { border-color: rgba(22,163,74,.4); }
 .electricity-badges { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
 .electricity-paid-badge {
@@ -1387,6 +1394,37 @@ body.notification-open { overflow: hidden; touch-action: none; }
 .electricity-pay-spacer { flex: 1; }
 .meter-filter-row { display: flex; gap: 8px; margin: 0 0 10px; flex-wrap: wrap; }
 .electricity-sep-chip { background: #eef2ff !important; color: #4f46e5 !important; }
+.utility-edit-meta {
+  display: flex; gap: 8px; flex-wrap: wrap; margin: -6px 0 16px;
+  color: var(--ink-3); font-size: 11px; font-weight: 750;
+}
+.utility-edit-meta span {
+  padding: 6px 9px; border-radius: 99px; background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+.utility-edit-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px;
+}
+.utility-edit-preview {
+  display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 8px;
+  margin-top: 8px; padding: 12px; border-radius: var(--radius-md);
+  background: linear-gradient(135deg, #f0fdfa, #f8fafc);
+  border: 1px solid rgba(20,184,166,.22);
+}
+.utility-edit-preview div { min-width: 0; }
+.utility-edit-preview small {
+  display: block; color: var(--ink-3); font-size: 9px; font-weight: 850;
+  letter-spacing: .05em; text-transform: uppercase; margin-bottom: 4px;
+}
+.utility-edit-preview strong {
+  display: block; color: var(--ink); font-size: 13px; font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 520px) {
+  .utility-edit-grid { grid-template-columns: 1fr; }
+  .utility-edit-preview { grid-template-columns: 1fr 1fr; }
+  .utility-edit-preview div:last-child { grid-column: 1 / -1; }
+}
 .msg-type-badge {
   padding: 3px 9px; border-radius: 99px;
   font-size: 10px; font-weight: 850; white-space: nowrap;
@@ -1645,6 +1683,40 @@ body.notification-open { overflow: hidden; touch-action: none; }
       <button class="modal-cancel" onclick="closeModal()">Cancel</button>
       <button class="modal-end" id="modalEndBtn" onclick="endContract()" style="display:none">End Contract</button>
       <button class="modal-save" id="modalSaveBtn" onclick="saveEdit()">💾 Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Full utility record editor -->
+<div class="modal-bg hidden" id="utilityEditBg">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2 id="utilityEditTitle">⚡ Edit utility record</h2>
+    <div class="utility-edit-meta">
+      <span id="utilityEditOffice"></span>
+      <span id="utilityEditMonth"></span>
+    </div>
+    <div class="field"><label>Meter serial number</label><input type="text" id="uSerial" autocomplete="off"></div>
+    <div class="utility-edit-grid">
+      <div class="field"><label>Previous day reading</label><input type="number" inputmode="decimal" step="0.01" id="uT1Prev"></div>
+      <div class="field"><label>Previous night reading</label><input type="number" inputmode="decimal" step="0.01" id="uT2Prev"></div>
+      <div class="field"><label>Current day reading</label><input type="number" inputmode="decimal" step="0.01" id="uT1Current"></div>
+      <div class="field"><label>Current night reading</label><input type="number" inputmode="decimal" step="0.01" id="uT2Current"></div>
+    </div>
+    <div class="field"><label>📶 Internet billed by Plus One</label>
+      <select id="uInternet">
+        <option value="yes">Yes · 5,000 ֏</option>
+        <option value="no">No</option>
+      </select>
+    </div>
+    <div class="utility-edit-preview">
+      <div><small>Day usage</small><strong id="uPreviewDay">0 kWh</strong></div>
+      <div><small>Night usage</small><strong id="uPreviewNight">0 kWh</strong></div>
+      <div><small>Electricity total</small><strong id="uPreviewTotal">0 ֏</strong></div>
+    </div>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeUtilityEdit()">Cancel</button>
+      <button class="modal-save" id="utilityEditSave" onclick="saveUtilityEdit()">💾 Save changes</button>
     </div>
   </div>
 </div>
@@ -3398,6 +3470,7 @@ function rLabel(s) {
 ═══════════════════════════════════════════════ */
 // Drafts are isolated by month so switching months never carries readings over.
 var meterDraft = {};
+var utilityEditingApt = '';
 var TARIFF_DAY   = 54;
 var TARIFF_NIGHT = 45;
 
@@ -3658,7 +3731,10 @@ function renderMeterPanel() {
             '<div class="electricity-result-usage" id="musage-' + meterText(t.apt) + '">Day ' + fmt(calc.kwhDay) + ' · Night ' + fmt(calc.kwhNight) + ' kWh</div>' +
             '<div class="electricity-result-total-row"><span class="electricity-total-label">Total</span><span class="electricity-result-total" id="mtotal-' + meterText(t.apt) + '">' + (calc.amdTotal ? fmt(calc.amdTotal) + ' ֏' : '—') + '</span></div>' +
           '</div>' +
-          '<button class="electricity-save" id="msave-' + meterText(t.apt) + '" onclick="saveSingleMeter(\x27' + meterText(t.apt) + '\x27)">Save</button>' +
+          '<div style="display:flex;gap:7px">' +
+            '<button class="electricity-edit" onclick="openUtilityEdit(\x27' + meterText(t.apt) + '\x27)" title="Edit all utility information">✏️</button>' +
+            '<button class="electricity-save" id="msave-' + meterText(t.apt) + '" onclick="saveSingleMeter(\x27' + meterText(t.apt) + '\x27)">Save</button>' +
+          '</div>' +
         '</div>' +
         (isBillingMonth ?
           '<div class="electricity-pay-row">' +
@@ -3721,6 +3797,105 @@ function meterInputChange(apt) {
   if (t2Input) t2Input.classList.add('dirty');
   updateMeterSummary();
 }
+
+function utilityEditValue(id) {
+  var el = document.getElementById(id);
+  return el ? el.value.trim() : '';
+}
+
+function updateUtilityEditPreview() {
+  var p1 = Number(utilityEditValue('uT1Prev')) || 0;
+  var p2 = Number(utilityEditValue('uT2Prev')) || 0;
+  var c1 = Number(utilityEditValue('uT1Current')) || 0;
+  var c2 = Number(utilityEditValue('uT2Current')) || 0;
+  var calc = calcMeterAmounts(p1, p2, c1, c2);
+  document.getElementById('uPreviewDay').textContent = fmt(calc.kwhDay) + ' kWh';
+  document.getElementById('uPreviewNight').textContent = fmt(calc.kwhNight) + ' kWh';
+  document.getElementById('uPreviewTotal').textContent = fmt(calc.amdTotal) + ' ֏';
+}
+
+function openUtilityEdit(apt) {
+  var t = tenants.find(function(x) { return x.apt === apt; });
+  if (!t) return;
+  var ex = meterReading(apt, meterMonth) || {};
+  var baseline = meterBaseline(apt, meterMonth);
+  utilityEditingApt = apt;
+  document.getElementById('utilityEditTitle').textContent = '⚡ Edit utility record';
+  document.getElementById('utilityEditOffice').textContent = 'Office ' + apt + ' · ' + (t.name || '—');
+  document.getElementById('utilityEditMonth').textContent = meterMonth;
+  document.getElementById('uSerial').value = ex.serial || baseline.serial || '';
+  document.getElementById('uT1Prev').value = ex.t1prev !== undefined ? ex.t1prev : baseline.t1;
+  document.getElementById('uT2Prev').value = ex.t2prev !== undefined ? ex.t2prev : baseline.t2;
+  document.getElementById('uT1Current').value = ex.t1current !== undefined ? ex.t1current : '';
+  document.getElementById('uT2Current').value = ex.t2current !== undefined ? ex.t2current : '';
+  document.getElementById('uInternet').value = tenantHasInternet(t, ex) ? 'yes' : 'no';
+  ['uT1Prev','uT2Prev','uT1Current','uT2Current'].forEach(function(id) {
+    document.getElementById(id).oninput = updateUtilityEditPreview;
+  });
+  updateUtilityEditPreview();
+  document.getElementById('utilityEditBg').classList.remove('hidden');
+  document.body.classList.add('notification-open');
+  document.getElementById('uSerial').focus();
+}
+
+function closeUtilityEdit() {
+  document.getElementById('utilityEditBg').classList.add('hidden');
+  document.body.classList.remove('notification-open');
+  utilityEditingApt = '';
+}
+
+function saveUtilityEdit() {
+  var apt = utilityEditingApt;
+  var t = tenants.find(function(x) { return x.apt === apt; });
+  if (!apt || !t) return;
+  var values = {
+    serial: utilityEditValue('uSerial'),
+    t1prev: utilityEditValue('uT1Prev'),
+    t2prev: utilityEditValue('uT2Prev'),
+    t1current: utilityEditValue('uT1Current'),
+    t2current: utilityEditValue('uT2Current'),
+    internet: document.getElementById('uInternet').value
+  };
+  if ([values.t1prev, values.t2prev, values.t1current, values.t2current].some(function(v) { return v === ''; })) {
+    toast('All four readings are required', 'error');
+    return;
+  }
+  if (Number(values.t1current) < Number(values.t1prev) || Number(values.t2current) < Number(values.t2prev)) {
+    toast('Current readings cannot be below previous readings', 'error');
+    return;
+  }
+  var btn = document.getElementById('utilityEditSave');
+  btn.textContent = '⏳ Saving...'; btn.disabled = true;
+  var url = API + '?action=updateMeterRecord' +
+    '&apt=' + encodeURIComponent(apt) +
+    '&month=' + encodeURIComponent(meterMonth) +
+    '&serial=' + encodeURIComponent(values.serial) +
+    '&t1prev=' + encodeURIComponent(values.t1prev) +
+    '&t2prev=' + encodeURIComponent(values.t2prev) +
+    '&t1current=' + encodeURIComponent(values.t1current) +
+    '&t2current=' + encodeURIComponent(values.t2current) +
+    '&internet=' + encodeURIComponent(values.internet);
+  jsonpRetry(url, 2).then(function(res) {
+    if (!res || !res.ok) throw new Error((res && res.error) || 'Save failed');
+    elecMap[meterMonth + '_' + apt] = Object.assign({}, res, {
+      apt: apt, month: meterMonth, internet: values.internet === 'yes',
+      previousMonth: '', previousAssumed: false
+    });
+    t.internet = values.internet === 'yes';
+    delete meterDraft[meterMonth + '_' + apt];
+    btn.textContent = '💾 Save changes'; btn.disabled = false;
+    closeUtilityEdit();
+    renderMeterPanel();
+    toast('✓ Utility record updated', 'success');
+  }).catch(function(err) {
+    btn.textContent = '💾 Save changes'; btn.disabled = false;
+    toast((err && err.message) || 'Save failed', 'error');
+  });
+}
+
+document.getElementById('utilityEditBg').addEventListener('click', function(ev) {
+  if (ev.target === this) closeUtilityEdit();
+});
 
 function saveSingleMeter(apt) {
   var t = tenants.find(function(x) { return x.apt === apt; });
