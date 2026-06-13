@@ -1328,6 +1328,40 @@ body.notification-open { overflow: hidden; touch-action: none; }
   font-size: 12px; font-weight: 850; cursor: pointer;
 }
 .electricity-save.saving { opacity: .55; pointer-events: none; }
+.electricity-card.is-paid { border-color: rgba(22,163,74,.4); }
+.electricity-badges { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.electricity-paid-badge {
+  padding: 4px 9px; border-radius: 99px;
+  background: #f0fdf4; color: #16a34a;
+  font-size: 10px; font-weight: 850; letter-spacing: .03em;
+  white-space: nowrap;
+}
+.electricity-pay-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--border);
+}
+.electricity-pay-btn {
+  padding: 9px 14px; border: 1.5px solid var(--border);
+  border-radius: 10px; background: var(--surface-2); color: var(--ink);
+  font-size: 12px; font-weight: 850; cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s;
+}
+.electricity-pay-btn.is-paid {
+  background: #f0fdf4; border-color: rgba(22,163,74,.45); color: #16a34a;
+}
+.electricity-paid-at {
+  color: var(--ink-3); font-size: 10px; font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.electricity-pay-spacer { flex: 1; }
+.meter-filter-row { display: flex; gap: 8px; margin: 0 0 10px; }
+.msg-type-badge {
+  padding: 3px 9px; border-radius: 99px;
+  font-size: 10px; font-weight: 850; white-space: nowrap;
+}
+.msg-type-rent { background: #f0fdf4; color: #16a34a; }
+.msg-type-elec { background: #fffbeb; color: #b45309; }
 @media (max-width: 520px) {
   .meter-header-row { align-items: stretch; flex-wrap: wrap; }
   .meter-month-select { max-width: none; }
@@ -1428,7 +1462,6 @@ body.notification-open { overflow: hidden; touch-action: none; }
   <div class="month-row">
     <label>🏢</label>
     <select id="monthSel"></select>
-    <span class="elec-month-badge" id="elecMonthBadge" title="Utility readings month">⚡ —</span>
     <span class="last-sync" id="lastSync"></span>
   </div>
   <div class="search-wrap">
@@ -1485,6 +1518,14 @@ body.notification-open { overflow: hidden; touch-action: none; }
         <option value="rent">Rent ↓</option>
       </select>
       <button class="meter-save-all-btn" onclick="saveAllMeters()">Save entered</button>
+    </div>
+    <div id="meterStatsGrid" class="stats-grid" style="display:none"></div>
+    <div class="meter-filter-row">
+      <button class="chip paid-toggle-chip" id="meterPaidToggleBtn" onclick="toggleMeterShowPaid()" style="display:none">
+        <span id="meterPaidToggleIcon"></span>
+        <span id="meterPaidToggleLabel">Show Paid</span>
+        <span class="paid-count-badge" id="meterPaidCountBadge">0</span>
+      </button>
     </div>
     <div class="electricity-summary">
       <div>
@@ -1575,6 +1616,7 @@ body.notification-open { overflow: hidden; touch-action: none; }
   <div class="msg-sheet" id="notificationSheet">
     <div class="msg-sheet-head">
       <div class="msg-sheet-title" id="notificationTitle">Message</div>
+      <span class="msg-type-badge msg-type-elec" id="notificationBadge">⚡ Utility Invoice</span>
       <button class="msg-close" id="notificationClose" type="button" aria-label="Close">×</button>
     </div>
     <div class="msg-text" id="notificationText"></div>
@@ -1682,7 +1724,9 @@ var hasInitialData = false;
 var reportOpen = false;
 var longPressTimer = null;
 var showPaid = false;  // hide fully-paid cards by default
+var meterShowPaid = false;      // electricity tab: hide paid offices by default
 var notificationApt = '';
+var notificationType = 'elec';  // 'rent' | 'elec' — which message the modal shows
 
 /* ═══════════════════════════════════════════════
    UTILS
@@ -1919,7 +1963,7 @@ function toast(msg, type) {
 /* ═══════════════════════════════════════════════
    MESSAGE BUILDER
 ═══════════════════════════════════════════════ */
-function makeMsg(apt) {
+function makeElecMsg(apt) {
   var t0 = tenants.find(function(x) { return x.apt === apt; }) || {};
   var e = utilityForTenant(t0);
   if (e.amdDay === undefined) return '';
@@ -1932,6 +1976,20 @@ function makeMsg(apt) {
   var t = tenants.find(function(x) { return x.apt === apt; }) || {};
   if (tenantHasInternet(t, e)) m += '\n📶 Internet = 5,000 ֏';
   m += '\n💳 Ընդամենը՝ ' + fmt(total) + ' ֏';
+  m += '\n\nՓոխանցումն կարող եք իրականացնել քարտին փոխանցմամբ կամ ընթացիկ հաշվին փոխանցելով հետևյալ վավերապայմաններով';
+  m += '\n\nՔարտի համար՝ 4578890004189245\nԲանկ Inecobank CJSC\nՍտացող Հովհաննես Հարությունյան';
+  m += '\n\nԿամ հետևյալ ընթացիկ հաշվին\nՀաշվեհամար՝ 2050558685537008\nԲանկ Inecobank CJSC\nՍտացող Հովհաննես Հարությունյան';
+  m += '\n\nՓոխանցումն իրականացնելուց հետո խնդրում ենք հաստատումը պարտադիր մեզ ուղարկել\n\nՇնորհակալություն!';
+  return m;
+}
+
+function makeRentMsg(apt) {
+  var t = tenants.find(function(x) { return x.apt === apt; }) || {};
+  if (!t.apt) return '';
+  var m = 'Հարգելի գործընկեր!\n\n';
+  m += 'Հիշեցնում ենք, որ ամսվա ' + (t.day || '') + '-ը Ձեր գրասենյակի վարձավճարի օրն է։\n\n';
+  m += '🏢 Գրասենյակ ' + t.apt + '\n';
+  m += '💳 Վարձավճար՝ ' + fmt(t.rent) + ' ֏';
   m += '\n\nՓոխանցումն կարող եք իրականացնել քարտին փոխանցմամբ կամ ընթացիկ հաշվին փոխանցելով հետևյալ վավերապայմաններով';
   m += '\n\nՔարտի համար՝ 4578890004189245\nԲանկ Inecobank CJSC\nՍտացող Հովհաննես Հարությունյան';
   m += '\n\nԿամ հետևյալ ընթացիկ հաշվին\nՀաշվեհամար՝ 2050558685537008\nԲանկ Inecobank CJSC\nՍտացող Հովհաննես Հարությունյան';
@@ -2065,6 +2123,7 @@ function refreshAll() {
     setSyncState('ok');
     render();
     renderChart();
+    if (curTab === 'meter') renderMeterPanel();
     syncInFlight = false;
   }).catch(function(err) {
     syncInFlight = false;
@@ -2100,6 +2159,7 @@ function reloadForMonth() {
     setSyncState('ok');
     render();
     renderChart();
+    if (curTab === 'meter') renderMeterPanel();
     syncInFlight = false;
   }).catch(function() {
     setConnectionWarning(true);
@@ -2607,14 +2667,14 @@ function toggleDeposit(apt, name) {
    status tap: rent btn, elec btn, chips, paid-at
 ═══════════════════════════════════════════════ */
 function patchCard(apt) {
+  // Electricity tab card refresh — main list card may also exist below
+  if (curTab === 'meter') renderMeterPanel();
+
   var card = document.querySelector('[data-card="' + apt + '"]');
   if (!card) return;          // card not in DOM (hidden/filtered) → skip
 
   var t = tenants.find(function(x) { return x.apt === apt; }) || {};
   var s = st[apt] || {};
-  var e = utilityForTenant(t);
-  var hasE = e.amdDay !== undefined;
-  var hasInternet = tenantHasInternet(t, e);
 
   // ── Rent button ──────────────────────────────
   var rBtn = card.querySelector('[data-type="r"]');
@@ -2622,14 +2682,6 @@ function patchCard(apt) {
     var rentBtnStatus = s.r === 'paid' ? s.r : '';
     rBtn.className = 'action-btn' + (rentBtnStatus ? ' a-r' + rentBtnStatus : '');
     rBtn.innerHTML = rentBtnStatus ? rLabel(rentBtnStatus) : '🏢 Rent';
-  }
-
-  // ── Elec button ──────────────────────────────
-  var eBtn = card.querySelector('[data-type="e"]');
-  if (eBtn) {
-    var elecBtnStatus = s.e === 'paid' ? s.e : '';
-    eBtn.className = 'action-btn' + (elecBtnStatus ? ' a-e' + elecBtnStatus : '');
-    eBtn.innerHTML = elecBtnStatus ? eLabel(elecBtnStatus) : '⚡ Electricity';
   }
 
   var depositBtn = card.querySelector('[data-deposit]');
@@ -2642,20 +2694,15 @@ function patchCard(apt) {
   var statusRow = card.querySelector('.status-row');
   if (statusRow) {
     var rChip = s.r ? '<span class="s-chip s-' + s.r + '">' + rLabel(s.r) + '</span>' : '';
-    var eChip = hasE && s.e ? '<span class="s-chip s-' + s.e + '">' + eLabel(s.e) + '</span>' : '';
-    statusRow.innerHTML = rChip + eChip;
+    statusRow.innerHTML = rChip;
   }
 
   // ── Paid-at table ────────────────────────────
   var paidAtEl = card.querySelector('.paid-at-table');
   var rentPaidText = paidAtLabel(s.rentPaidAt || (paymentRow(curMonth,  apt) || {}).rentPaidAt);
-  var elecPaidText = paidAtLabel(s.electricityPaidAt || (paymentRow(elecMonth, apt) || {}).electricityPaidAt);
-  var netPaidText  = (hasInternet && elecPaidText) ? elecPaidText : '';
-  var newPaidAt = (rentPaidText || elecPaidText || netPaidText) ?
+  var newPaidAt = rentPaidText ?
     '<div class="paid-at-table">' +
-      (rentPaidText ? '<div class="pa-row pa-rent"><span class="pa-icon">🏢</span><span class="pa-time">' + rentPaidText + '</span></div>' : '') +
-      (elecPaidText ? '<div class="pa-row pa-elec"><span class="pa-icon">⚡</span><span class="pa-time">' + elecPaidText + '</span></div>' : '') +
-      (netPaidText  ? '<div class="pa-row pa-net"><span class="pa-icon">📶</span><span class="pa-time">'  + netPaidText  + '</span></div>' : '') +
+      '<div class="pa-row pa-rent"><span class="pa-icon">🏢</span><span class="pa-time">' + rentPaidText + '</span></div>' +
     '</div>' : '';
 
   if (paidAtEl) {
@@ -2897,6 +2944,11 @@ function toggleShowPaid() {
   render();
 }
 
+function toggleMeterShowPaid() {
+  meterShowPaid = !meterShowPaid;
+  renderMeterPanel();
+}
+
 /* ═══════════════════════════════════════════════
    SEARCH & FILTERS
 ═══════════════════════════════════════════════ */
@@ -2929,10 +2981,14 @@ document.querySelectorAll('.chip[data-tab]').forEach(function(b) {
 /* ═══════════════════════════════════════════════
    SEND MESSAGE
 ═══════════════════════════════════════════════ */
-function sendMsg(apt) {
+function msgForType(apt, type) {
+  return type === 'rent' ? makeRentMsg(apt) : makeElecMsg(apt);
+}
+
+function sendMsg(apt, type) {
   var t = tenants.find(function(x) { return x.apt === apt; });
   if (!t) return;
-  var msg = makeMsg(apt);
+  var msg = msgForType(apt, type || notificationType);
   if (!msg) { toast('⚡ No data', 'error'); return; }
   var encoded = encodeURIComponent(msg);
   var phone = t.phone, ch = t.ch;
@@ -2942,22 +2998,29 @@ function sendMsg(apt) {
   else { window.open('https://wa.me/?text=' + encoded, '_blank'); }
 }
 
-function copyMsg(apt) {
-  var m = makeMsg(apt);
+function copyMsg(apt, type) {
+  var m = msgForType(apt, type || notificationType);
   if (!m) { toast('⚡ No data', 'error'); return; }
   if (navigator.clipboard) {
     navigator.clipboard.writeText(m).then(function() { toast('✓ Copied', 'success'); });
   } else { toast('✗ Clipboard', 'error'); }
 }
 
-function openNotification(apt) {
+function openNotification(apt, type) {
   var modal = document.getElementById('notificationModal');
-  var text = makeMsg(apt);
+  type = type || 'elec';
+  var text = msgForType(apt, type);
   if (!modal || !text) {
     toast('⚡ No data', 'error');
     return;
   }
   notificationApt = apt;
+  notificationType = type;
+  var badge = document.getElementById('notificationBadge');
+  if (badge) {
+    badge.textContent = type === 'rent' ? '🏢 Rent Reminder' : '⚡ Utility Invoice';
+    badge.className = 'msg-type-badge ' + (type === 'rent' ? 'msg-type-rent' : 'msg-type-elec');
+  }
   document.getElementById('notificationTitle').textContent = 'Message · Office ' + apt;
   document.getElementById('notificationText').textContent = text;
   document.getElementById('notificationSheet').scrollTop = 0;
@@ -2983,7 +3046,7 @@ document.getElementById('notificationClose').addEventListener('click', function(
 document.getElementById('notificationCopy').addEventListener('click', function(ev) {
   ev.preventDefault();
   ev.stopPropagation();
-  if (notificationApt) copyMsg(notificationApt);
+  if (notificationApt) copyMsg(notificationApt, notificationType);
 });
 document.getElementById('notificationModal').addEventListener('click', function(ev) {
   if (ev.target === this) closeNotification();
@@ -3006,7 +3069,6 @@ function render() {
   }
   var q = (document.getElementById('search').value || '').toLowerCase().trim();
   var today = new Date().getDate();
-  var isElecPeriod = today >= 1 && today <= 5;
   var sortBy = document.getElementById('sortSel').value;
 
   // Filter
@@ -3017,22 +3079,19 @@ function render() {
       (t.phone && t.phone.includes(q));
     if (!mq) return false;
     var s = st[t.apt] || {};
-    if (curTab === 'elec') return utilityForTenant(t).amdDay !== undefined;
     if (curTab === 'rent') return true;
-    if (curTab === 'unpaid') return !isRentCovered(s.r) || (s.e !== 'paid' && utilityForTenant(t).amdDay !== undefined);
-    if (curTab === 'today') return t.day === today || (isElecPeriod && utilityForTenant(t).amdDay !== undefined);
+    if (curTab === 'unpaid') return !isRentCovered(s.r);
+    if (curTab === 'today') return t.day === today;
     if (curTab === 'deposit') return s.r === 'deposit';
     if (curTab === 'internet') return tenantHasInternet(t, utilityForTenant(t));
     return true;
   });
 
   // ── Hide fully-paid cards ───────────────────────
-  // "Fully paid" = rent covered AND (no elec subscription OR elec paid)
+  // Main tab tracks rent only — utilities are handled in the Electricity tab
   function isFullyPaid(t) {
     var s = st[t.apt] || {};
-    var rentOk = isRentCovered(s.r);
-    var elecOk = utilityForTenant(t).amdDay === undefined || s.e === 'paid';
-    return rentOk && elecOk;
+    return isRentCovered(s.r);
   }
   var paidCards  = list.filter(isFullyPaid);
   var paidCount  = paidCards.length;
@@ -3080,23 +3139,13 @@ function render() {
     return (a.day || 99) - (b.day || 99);
   });
 
-  // ── Stats ────────────────────────────────────
-  var eAll  = tenants.filter(function(t){ return utilityForTenant(t).amdDay !== undefined; });
-  var ePaid = eAll.filter(function(t){ return st[t.apt] && st[t.apt].e === 'paid'; });
-  var netAll  = tenants.filter(function(t){ return tenantHasInternet(t, utilityForTenant(t)); });
-  var netPaid = netAll.filter(function(t){ return st[t.apt] && st[t.apt].e === 'paid'; });
+  // ── Stats (rent only — utilities live in the Electricity tab) ──
   var f = calcFinancials();
-
-  var ep = eAll.length ? Math.round(ePaid.length / eAll.length * 100) : 0;
-  var rp = tenants.length ? Math.round((tenants.filter(function(t){ var s=st[t.apt]||{}; return isRentCovered(s.r); }).length) / tenants.length * 100) : 0;
-  var np = netAll.length ? Math.round(netPaid.length / netAll.length * 100) : 0;
 
   var statsGrid = document.getElementById('statsGrid');
   statsGrid.innerHTML =
     statCard('🏢 Rent', fmt(f.rentTotal) + ' ֏', fmt(f.rentCollected) + ' ֏ collected', 'c-green', '', fmt(f.rentTotal - f.rentCollected) + ' ֏ remaining') +
-    statCard('⚡ Electricity', fmt(f.elecTotal) + ' ֏', fmt(f.elecCollected) + ' ֏ collected', 'c-amber', '', fmt(f.elecTotal - f.elecCollected) + ' ֏ remaining') +
-    statCard('📶 Internet', fmt(f.netTotal) + ' ֏', fmt(f.netCollected) + ' ֏ collected', 'c-purple', '', fmt(f.netTotal - f.netCollected) + ' ֏ remaining') +
-    statCard('💰 Total', fmt(f.totalDue) + ' ֏', fmt(f.totalCollected) + ' ֏ collected', 'c-blue', '', fmt(f.totalDue - f.totalCollected) + ' ֏ remaining');
+    statCard('⟳ Deposit', fmt(f.depAmt) + ' ֏', f.depCount + ' offices', 'c-amber', '');
 
   // Trigger counter animation
   statsGrid.querySelectorAll('.stat-val').forEach(function(el) {
@@ -3122,19 +3171,12 @@ function render() {
   var lastDay = null;
   var lastFloor = null;
   visibleList.forEach(function(t) {
-    var e = utilityForTenant(t);
-    var hasE = e.amdDay !== undefined;
     var s = st[t.apt] || { e: null, r: null };
-    var hasInternet = tenantHasInternet(t, e);   // needed early for netPaidText
     var nextPrepay = paymentRow(nextMonthLabel(curMonth), t.apt);
     var hasNextPrepay = !!(nextPrepay && nextPrepay.rentStatus === 'prepaid');
     var rentPaidText  = paidAtLabel(s.rentPaidAt || (paymentRow(curMonth,  t.apt) || {}).rentPaidAt);
-    var elecPaidText  = paidAtLabel(s.electricityPaidAt || (paymentRow(elecMonth, t.apt) || {}).electricityPaidAt);
-    // Internet is paid together with electricity — same timestamp
-    var netPaidText   = (hasInternet && elecPaidText) ? elecPaidText : '';
     var isToday = t.day === today;
     var isOverdue = t.day > 0 && t.day < today && !isRentCovered(s.r);
-    var elecDue = hasE && isElecPeriod && s.e !== 'paid';
     // Floor group header
     if (!q && sortBy === 'floor') {
       var tFloor = aptFloor(t.apt);
@@ -3148,7 +3190,7 @@ function render() {
       }
     }
     // Day group header
-    if (!q && curTab !== 'elec' && sortBy === 'day' && t.day !== lastDay) {
+    if (!q && sortBy === 'day' && t.day !== lastDay) {
       lastDay = t.day;
       var dg = document.createElement('div');
       dg.className = 'day-grp' + (isToday ? ' today-grp' : '');
@@ -3157,17 +3199,10 @@ function render() {
       el.appendChild(dg);
     }
 
-    // Amounts display
-    var elecAmt = e.amdDay !== undefined ? e.amdDay + e.amdNight : 0;
-    var utilTotal = elecAmt + (hasInternet ? 5000 : 0);
-
     // Status chips
     var rChip = s.r ? '<span class="s-chip s-' + s.r + '">' + rLabel(s.r) + '</span>' : '';
-    var eChip = hasE && s.e ? '<span class="s-chip s-' + s.e + '">' + eLabel(s.e) + '</span>' : '';
 
     // Action button classes
-    var elecBtnStatus = s.e === 'paid' ? s.e : '';
-    var eCls = 'action-btn' + (elecBtnStatus ? ' a-e' + elecBtnStatus : '');
     var rentBtnStatus = s.r === 'paid' ? s.r : '';
     var rCls = 'action-btn' + (rentBtnStatus ? ' a-r' + rentBtnStatus : '');
     var dCls = 'action-btn deposit-btn' + (s.r === 'deposit' ? ' a-rdeposit is-active' : '');
@@ -3183,53 +3218,39 @@ function render() {
     div.innerHTML =
       '<div class="card-top" data-cardtop="' + t.apt + '">' +
         '<div class="card-left">' +
-          '<div class="apt-label">' + aptHl + ' ' + chBadge(t.ch) + (elecDue ? ' <span class="elec-alert">⚡!</span>' : '') + '</div>' +
+          '<div class="apt-label">' + aptHl + ' ' + chBadge(t.ch) + '</div>' +
           '<div class="apt-name">' + nameHl + '</div>' +
           '<div class="apt-phone">' + phoneHl + '</div>' +
-          (hasE ? '<div class="apt-detail">⚡ ' + fmt(elecAmt) + (hasInternet ? ' + 📶 5k' : '') + ' = ' + fmt(utilTotal) + ' ֏</div>' : (hasInternet ? '<div class="apt-detail">📶 Internet = 5,000 ֏</div>' : '')) +
         '</div>' +
         '<div class="card-right">' +
           '<div class="rent-amt">' + fmt(t.rent) + ' ֏</div>' +
           '<div class="rent-sub">Due day ' + t.day + '</div>' +
-          (rentPaidText || elecPaidText || netPaidText ?
+          (rentPaidText ?
             '<div class="paid-at-table">' +
-              (rentPaidText  ? '<div class="pa-row pa-rent"><span class="pa-icon">🏢</span><span class="pa-time">' + rentPaidText  + '</span></div>' : '') +
-              (elecPaidText  ? '<div class="pa-row pa-elec"><span class="pa-icon">⚡</span><span class="pa-time">' + elecPaidText  + '</span></div>' : '') +
-              (netPaidText   ? '<div class="pa-row pa-net"><span class="pa-icon">📶</span><span class="pa-time">'  + netPaidText   + '</span></div>' : '') +
+              '<div class="pa-row pa-rent"><span class="pa-icon">🏢</span><span class="pa-time">' + rentPaidText + '</span></div>' +
             '</div>'
           : '') +
-          '<div class="status-row">' + rChip + eChip + '</div>' +
+          '<div class="status-row">' + rChip + '</div>' +
         '</div>' +
       '</div>' +
       '<div class="card-actions">' +
-        (hasE ? '<button class="' + eCls + '" data-apt="' + t.apt + '" data-name="' + t.name + '" data-type="e">' + (elecBtnStatus ? eLabel(elecBtnStatus) : '⚡ Electricity') + '</button>' : '') +
         '<button class="' + rCls + '" data-apt="' + t.apt + '" data-name="' + t.name + '" data-type="r">' + (rentBtnStatus ? rLabel(rentBtnStatus) : '🏢 Rent') + '</button>' +
         '<button class="' + dCls + '" data-deposit="' + t.apt + '" data-name="' + t.name + '">' + (s.r === 'deposit' ? '⟳ Deposit<small>saved</small>' : '⟳ Deposit<small>this month</small>') + '</button>' +
         '<button class="action-btn prepay-btn' + (hasNextPrepay ? ' is-active' : '') + '" data-prepay="' + t.apt + '" data-name="' + t.name + '" data-active="' + (hasNextPrepay ? '1' : '0') + '" title="Click to save or remove next month prepayment">' + (hasNextPrepay ? '+1 Saved<small>click: remove</small>' : '+1 Prepay<small>next month</small>') + '</button>' +
         '<div class="quick-btns">' +
           '<button class="icon-btn" data-edit="' + t.apt + '" title="Edit">✏️</button>' +
-          (hasE ? '<button class="icon-btn" data-copy="' + t.apt + '" title="Copy">📋</button>' : '') +
-          '<button class="send-btn" data-send="' + t.apt + '" title="Send">📤</button>' +
+          '<button class="icon-btn" data-remind="' + t.apt + '" title="Rent reminder">📋</button>' +
+          '<button class="send-btn" data-send="' + t.apt + '" title="Send reminder">📤</button>' +
         '</div>' +
-      '</div>' +
-      (hasE ?
-        '<button class="msg-toggle" data-message="' + t.apt + '">Message ▾</button>'
-        : '<div class="no-elec">⚡ No subscription</div>');
+      '</div>';
 
     // Events
-    div.querySelectorAll('[data-type]').forEach(function(btn) {
-      if (btn.dataset.type === 'r') {
-        bindSingleDouble(btn, function() {
-          cycleR(this.dataset.apt, this.dataset.name);
-        }, function() {
-          clearRentPayment(this.dataset.apt, this.dataset.name);
-        });
-      } else {
-        btn.addEventListener('click', function(ev) {
-          ev.stopPropagation();
-          cycleE(this.dataset.apt, this.dataset.name);
-        });
-      }
+    div.querySelectorAll('[data-type="r"]').forEach(function(btn) {
+      bindSingleDouble(btn, function() {
+        cycleR(this.dataset.apt, this.dataset.name);
+      }, function() {
+        clearRentPayment(this.dataset.apt, this.dataset.name);
+      });
     });
     div.querySelectorAll('[data-edit]').forEach(function(btn) {
       btn.addEventListener('click', function(ev) { ev.stopPropagation(); openEdit(this.dataset.edit); });
@@ -3248,21 +3269,11 @@ function render() {
       });
     });
     div.querySelectorAll('[data-send]').forEach(function(btn) {
-      btn.addEventListener('click', function(ev) { ev.stopPropagation(); sendMsg(this.dataset.send); });
+      btn.addEventListener('click', function(ev) { ev.stopPropagation(); sendMsg(this.dataset.send, 'rent'); });
     });
-    div.querySelectorAll('[data-copy]').forEach(function(btn) {
-      btn.addEventListener('click', function(ev) { ev.stopPropagation(); copyMsg(this.dataset.copy); });
+    div.querySelectorAll('[data-remind]').forEach(function(btn) {
+      btn.addEventListener('click', function(ev) { ev.stopPropagation(); openNotification(this.dataset.remind, 'rent'); });
     });
-
-    // Open the single global notification modal.
-    var toggle = div.querySelector('.msg-toggle');
-    if (toggle) {
-      toggle.addEventListener('click', function(ev) {
-        ev.preventDefault();
-        ev.stopPropagation();
-        openNotification(this.dataset.message);
-      });
-    }
 
     // Long-press to edit
     div.addEventListener('pointerdown', function(ev) {
@@ -3299,10 +3310,6 @@ function progRow(label, pct, cls) {
     '</div>';
 }
 
-function eLabel(s) {
-  var m = { paid: '✓ Electricity' };
-  return m[s] || '⚡ Electricity';
-}
 function rLabel(s) {
   var m = { paid: '✓ Rent', deposit: '⟳ Deposit', late: '⏰ Late', prepaid: '🟢 Prepaid' };
   return m[s] || '🏢 Rent';
@@ -3446,7 +3453,27 @@ function renderMeterPanel() {
   if (chartPanel) chartPanel.style.display = 'none';
   document.getElementById('reportToggle').style.display = 'none';
   document.getElementById('list').style.display = 'none';
+  document.getElementById('paidToggleBtn').style.display = 'none';  // main-list chip — render() restores it
   buildMeterMonthSelector();
+
+  // ── Utility stats (only for the active billing month) ──
+  var isBillingMonth = meterMonth === elecMonth;
+  var meterStats = document.getElementById('meterStatsGrid');
+  if (meterStats) {
+    if (isBillingMonth) {
+      var f = calcFinancials();
+      var utilDue = f.elecTotal + f.netTotal;
+      var utilCollected = f.elecCollected + f.netCollected;
+      meterStats.style.display = '';
+      meterStats.innerHTML =
+        statCard('⚡ Electricity', fmt(f.elecTotal) + ' ֏', fmt(f.elecCollected) + ' ֏ collected', 'c-amber', '', fmt(f.elecTotal - f.elecCollected) + ' ֏ remaining') +
+        statCard('📶 Internet', fmt(f.netTotal) + ' ֏', fmt(f.netCollected) + ' ֏ collected', 'c-purple', '', fmt(f.netTotal - f.netCollected) + ' ֏ remaining') +
+        statCard('💰 Utilities', fmt(utilDue) + ' ֏', fmt(utilCollected) + ' ֏ collected', 'c-blue', '', fmt(utilDue - utilCollected) + ' ֏ remaining');
+    } else {
+      meterStats.style.display = 'none';
+      meterStats.innerHTML = '';
+    }
+  }
 
   var container = document.getElementById('meterList');
   if (!tenants.length) {
@@ -3454,7 +3481,46 @@ function renderMeterPanel() {
     return;
   }
 
-  var sorted = tenants.slice().sort(function(a, b) {
+  // Paid status for the displayed month: live st for the billing month,
+  // historic payment rows for any other month.
+  function meterIsPaid(apt) {
+    if (isBillingMonth) return !!(st[apt] && st[apt].e === 'paid');
+    return ((paymentRow(meterMonth, apt) || {}).elecStatus) === 'paid';
+  }
+
+  var paidList = tenants.filter(function(t) { return meterIsPaid(t.apt); });
+  var paidCount = paidList.length;
+
+  var toggleBtn   = document.getElementById('meterPaidToggleBtn');
+  var toggleLabel = document.getElementById('meterPaidToggleLabel');
+  var toggleIcon  = document.getElementById('meterPaidToggleIcon');
+  var countBadge  = document.getElementById('meterPaidCountBadge');
+  if (toggleBtn) {
+    if (paidCount > 0) {
+      toggleBtn.style.display = '';
+      countBadge.textContent = paidCount;
+      if (meterShowPaid) {
+        toggleBtn.classList.add('active');
+        toggleIcon.textContent  = '✓ ';
+        toggleLabel.textContent = 'Hide Paid';
+      } else {
+        toggleBtn.classList.remove('active');
+        toggleIcon.textContent  = '';
+        toggleLabel.textContent = 'Show Paid';
+      }
+    } else {
+      toggleBtn.style.display = 'none';
+    }
+  }
+
+  var visible = meterShowPaid ? tenants.slice() : tenants.filter(function(t) { return !meterIsPaid(t.apt); });
+  if (!visible.length) {
+    container.innerHTML = '<div class="meter-empty">All paid ✓</div>';
+    updateMeterSummary();
+    return;
+  }
+
+  var sorted = visible.sort(function(a, b) {
     if (meterSortBy === 'name') return (a.name||'').localeCompare(b.name||'', 'hy');
     if (meterSortBy === 'rent') return b.rent - a.rent;
     // floor sort (default)
@@ -3480,17 +3546,27 @@ function renderMeterPanel() {
     var hasSaved = ex.amdDay !== undefined || ex.t1current !== undefined;
     var serial = ex.serial || baseline.serial || '-';
     var previous = 'Day ' + fmt(t1prev) + ' · Night ' + fmt(t2prev);
+    var isPaid = meterIsPaid(t.apt);
+    var hasInternet = tenantHasInternet(t, ex);
+    var sMeter = st[t.apt] || {};
+    var elecPaidText = isBillingMonth ?
+      paidAtLabel(sMeter.electricityPaidAt || (paymentRow(elecMonth, t.apt) || {}).electricityPaidAt) :
+      paidAtLabel((paymentRow(meterMonth, t.apt) || {}).electricityPaidAt);
 
     html +=
-      '<article class="electricity-card" id="mrow-' + meterText(t.apt) + '">' +
+      '<article class="electricity-card' + (isPaid ? ' is-paid' : '') + '" id="mrow-' + meterText(t.apt) + '">' +
         '<div class="electricity-card-head">' +
           '<div><div class="electricity-office-label">Office</div><div class="electricity-office">' + meterText(t.apt) + '</div>' +
           '<div class="electricity-name">' + meterText(t.name || '-') + '</div></div>' +
-          '<span class="meter-saved-badge' + (hasSaved ? ' show' : '') + '" id="mbadge-' + meterText(t.apt) + '">saved</span>' +
+          '<div class="electricity-badges">' +
+            (isPaid ? '<span class="electricity-paid-badge">✓ Paid</span>' : '') +
+            '<span class="meter-saved-badge' + (hasSaved ? ' show' : '') + '" id="mbadge-' + meterText(t.apt) + '">saved</span>' +
+          '</div>' +
         '</div>' +
         '<div class="electricity-context">' +
           '<span>Serial ' + meterText(serial) + '</span>' +
           '<span>Previous · ' + meterText(previous) + '</span>' +
+          (hasInternet ? '<span>📶 Internet · 5,000 ֏</span>' : '') +
         '</div>' +
         '<div class="electricity-inputs">' +
           '<div class="electricity-field"><label>Day tariff</label><input type="number" inputmode="decimal" step="0.01" min="' + meterText(t1prev) + '" value="' + meterText(meterValue(t1cur)) + '" id="mt1cur-' + meterText(t.apt) + '" oninput="meterInputChange(\x27' + meterText(t.apt) + '\x27)"></div>' +
@@ -3503,6 +3579,15 @@ function renderMeterPanel() {
           '</div>' +
           '<button class="electricity-save" id="msave-' + meterText(t.apt) + '" onclick="saveSingleMeter(\x27' + meterText(t.apt) + '\x27)">Save</button>' +
         '</div>' +
+        (isBillingMonth ?
+          '<div class="electricity-pay-row">' +
+            '<button class="electricity-pay-btn' + (isPaid ? ' is-paid' : '') + '" onclick="cycleE(\x27' + meterText(t.apt) + '\x27, \x27' + meterText(t.name || '') + '\x27)">' + (isPaid ? '✓ Paid · tap to undo' : '⚡ Mark Paid') + '</button>' +
+            (elecPaidText ? '<span class="electricity-paid-at">' + elecPaidText + '</span>' : '') +
+            '<span class="electricity-pay-spacer"></span>' +
+            '<button class="icon-btn" onclick="openNotification(\x27' + meterText(t.apt) + '\x27, \x27elec\x27)" title="Utility invoice">📋</button>' +
+            '<button class="send-btn" onclick="sendMsg(\x27' + meterText(t.apt) + '\x27, \x27elec\x27)" title="Send invoice">📤</button>' +
+          '</div>'
+        : '') +
       '</article>';
   });
   html += '</div>';
