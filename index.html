@@ -7,7 +7,7 @@
 /* One-time regular-Chrome repair. Incognito has no persistent worker/cache,
    so regular Chrome must explicitly detach from any old installation. */
 (function() {
-  var repairVersion = 'chrome-repair-20260612-3';
+  var repairVersion = 'chrome-repair-20260613-financial-report-1';
   var repairKey = 'plusone_browser_repair';
   var alreadyRepaired = false;
 
@@ -1457,9 +1457,9 @@ body.notification-open { overflow: hidden; touch-action: none; }
   #statsGrid { grid-column: 1 / -1; }
   #progPanel  { grid-column: 1 / 7; }
   #chartPanel { grid-column: 7 / -1; }
-  .sort-bar         { grid-column: 1 / 7; }
-  .report-toggle    { grid-column: 7 / -1; }
-  .report-body      { grid-column: 7 / -1; }
+  .sort-bar         { grid-column: 1 / 7; min-width: 0; }
+  .report-toggle    { grid-column: 7 / -1; min-width: 0; }
+  .report-body      { grid-column: 7 / -1; min-width: 0; }
   #meterPanel       { grid-column: 1 / -1; }
   #list {
     grid-column: 1 / -1;
