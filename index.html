@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="hy">
 <head>
 <meta charset="UTF-8">
@@ -577,33 +577,44 @@ canvas#reportChart { width: 100%; height: 130px; border-radius: 8px; }
 .card {
   position: relative;
   display: grid;
-  grid-template-rows: 164px 142px 42px;
-  height: 348px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  margin-bottom: 10px;
+  grid-template-rows: 132px 132px;
+  height: 264px;
+  background:
+    radial-gradient(circle at 92% -8%, rgba(20,184,166,.12), transparent 34%),
+    linear-gradient(180deg, #fff 0%, #fbfdff 100%);
+  border: 1px solid rgba(148,163,184,.34);
+  border-radius: 22px;
+  margin-bottom: 12px;
   overflow: hidden;
-  box-shadow: var(--sh-sm);
-  transition: transform .18s ease, box-shadow .18s ease, opacity .25s;
+  box-shadow:
+    0 1px 2px rgba(15,23,42,.04),
+    0 12px 30px rgba(15,23,42,.08);
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease, opacity .25s;
   user-select: none;
+  isolation: isolate;
 }
 .card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--sh-lg);
+  transform: translateY(-3px);
+  border-color: rgba(20,184,166,.3);
+  box-shadow:
+    0 2px 5px rgba(15,23,42,.05),
+    0 18px 42px rgba(15,23,42,.12);
 }
 /* Top shimmer line */
 .card::before {
   content: '';
-  position: absolute; top: 0; left: 0; right: 0; height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(201,168,76,.3) 40%, rgba(106,170,82,.25) 60%, transparent);
+  position: absolute; top: 0; left: 22px; right: 22px; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.95), transparent);
   pointer-events: none;
+  z-index: 2;
 }
 /* ── State-coded left bar (signature) ── */
 .card::after {
   content: '';
-  position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
-  background: var(--border-2);
+  position: absolute; left: 0; top: 22px; bottom: 22px; width: 4px;
+  border-radius: 0 999px 999px 0;
+  background: linear-gradient(180deg, var(--sage), var(--forest));
+  box-shadow: 0 0 18px rgba(20,184,166,.28);
   transition: background .3s;
 }
 /* These classes are toggled by JS via patchCard */
@@ -611,21 +622,27 @@ canvas#reportChart { width: 100%; height: 130px; border-radius: 8px; }
 
 .card-top {
   min-height: 0; overflow: hidden;
-  padding: 14px 16px 12px; display: flex; gap: 12px; cursor: pointer;
+  padding: 18px 20px 16px 22px;
+  display: flex; gap: 16px; cursor: pointer;
+  align-items: flex-start;
 }
 .card-left { flex: 1; min-width: 0; }
 .apt-label {
-  font-size: 10px; font-weight: 900; letter-spacing: .07em;
+  font-size: 10px; font-weight: 900; letter-spacing: .1em;
   text-transform: uppercase; color: var(--sage);
-  margin-bottom: 3px;
+  margin-bottom: 8px;
   display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
 }
 .apt-name {
-  font-size: 16px; font-weight: 800; letter-spacing: -.025em;
-  color: var(--ink); margin-bottom: 3px;
+  font-size: 17px; font-weight: 850; letter-spacing: -.035em;
+  line-height: 1.18;
+  color: var(--ink); margin-bottom: 7px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.apt-phone { font-size: 12px; color: var(--ink-3); font-weight: 500; margin-bottom: 4px; }
+.apt-phone {
+  font-size: 12px; color: #7c8da6; font-weight: 650; margin-bottom: 4px;
+  font-variant-numeric: tabular-nums; letter-spacing: .025em;
+}
 .apt-detail {
   display: inline-flex; align-items: center;
   background: var(--surface-3); border: 1px solid var(--border);
@@ -634,17 +651,23 @@ canvas#reportChart { width: 100%; height: 130px; border-radius: 8px; }
   margin-top: 4px;
 }
 .card-right {
-  display: flex; flex-direction: column; align-items: flex-end; gap: 4px;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 5px;
   flex-shrink: 0; text-align: right;
 }
 .rent-amt {
-  font-size: 15px; font-weight: 900; letter-spacing: -.03em;
+  font-size: 17px; font-weight: 950; letter-spacing: -.045em;
   color: #fff;
-  background: var(--forest);
-  padding: 5px 10px; border-radius: var(--radius-sm);
-  box-shadow: 0 4px 12px rgba(8,145,178,.2);
+  background: linear-gradient(135deg, #071a2f 0%, #0c2d45 100%);
+  padding: 9px 13px; border-radius: 13px;
+  box-shadow:
+    0 8px 18px rgba(7,26,47,.2),
+    inset 0 1px 0 rgba(255,255,255,.12);
+  font-variant-numeric: tabular-nums;
 }
-.rent-sub { font-size: 11px; color: var(--ink-3); font-weight: 600; }
+.rent-sub {
+  font-size: 10px; color: #8392a8; font-weight: 750;
+  padding-right: 2px;
+}
 .util-amt { font-size: 11px; font-weight: 700; color: var(--ink-2); }
 .status-row { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; margin-top: 3px; }
 
@@ -704,28 +727,35 @@ canvas#reportChart { width: 100%; height: 130px; border-radius: 8px; }
    CARD ACTIONS
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .card-actions {
-  padding: 10px 12px 12px;
-  background: var(--surface-2);
-  border-top: 1px solid var(--border);
+  padding: 12px 14px 14px;
+  background: linear-gradient(180deg, rgba(243,247,251,.72), #f4f8fb);
+  border-top: 1px solid rgba(203,213,225,.62);
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  grid-template-rows: 58px 44px;
-  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: 62px 40px;
+  gap: 10px 8px;
   align-items: stretch;
 }
 .action-btn {
   min-width: 0;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 2px; padding: 9px 8px;
-  border-radius: var(--radius-sm);
-  border: 1.5px solid var(--border);
-  background: var(--surface);
+  gap: 3px; padding: 9px 7px;
+  border-radius: 13px;
+  border: 1px solid rgba(203,213,225,.9);
+  background: rgba(255,255,255,.92);
   color: var(--ink-2);
-  font-size: 11px; font-weight: 800; line-height: 1.2;
+  font-size: 11px; font-weight: 850; line-height: 1.18;
   text-align: center; white-space: normal;
-  min-height: 0; height: 58px;
-  transition: transform .13s, box-shadow .13s, background .13s;
-  box-shadow: var(--sh-xs);
+  min-height: 0; height: 62px;
+  transition: transform .15s, box-shadow .15s, background .15s, border-color .15s;
+  box-shadow:
+    0 1px 2px rgba(15,23,42,.04),
+    0 5px 12px rgba(15,23,42,.055);
+}
+.action-btn:hover {
+  transform: translateY(-1px);
+  border-color: rgba(20,184,166,.32);
+  box-shadow: 0 8px 18px rgba(15,23,42,.09);
 }
 .action-btn:active { transform: scale(.93) translateY(1px); box-shadow: none; }
 
@@ -767,10 +797,10 @@ canvas#reportChart { width: 100%; height: 130px; border-radius: 8px; }
   position: relative; overflow: hidden;
   flex: 1; min-width: 0;
   border: none !important;
-  background: linear-gradient(135deg, var(--champagne) 0%, #0891b2 55%, #0e7490 100%) !important;
+  background: linear-gradient(135deg, #12b8c7 0%, #0891b2 48%, #08738f 100%) !important;
   color: #fff !important;
-  border-radius: var(--radius-sm) !important;
-  box-shadow: 0 4px 14px rgba(201,168,76,.35), inset 0 1px 0 rgba(255,255,255,.2) !important;
+  border-radius: 13px !important;
+  box-shadow: 0 8px 18px rgba(8,145,178,.23), inset 0 1px 0 rgba(255,255,255,.22) !important;
   transition: transform .14s, box-shadow .14s, opacity .14s !important;
 }
 .prepay-btn small { display: block; font-size: 9px; font-weight: 700; opacity: .8; margin-top: 2px; }
@@ -787,20 +817,20 @@ canvas#reportChart { width: 100%; height: 130px; border-radius: 8px; }
   display: flex; gap: 7px; justify-content: flex-end; align-items: stretch;
 }
 .icon-btn {
-  width: 46px; padding: 8px; border-radius: var(--radius-sm);
-  border: 1.5px solid var(--border);
-  background: var(--surface);
+  width: 42px; padding: 7px; border-radius: 12px;
+  border: 1px solid rgba(203,213,225,.9);
+  background: rgba(255,255,255,.88);
   color: var(--ink-2); font-size: 15px;
-  box-shadow: var(--sh-xs);
-  transition: transform .13s, box-shadow .13s;
+  box-shadow: 0 3px 9px rgba(15,23,42,.055);
+  transition: transform .13s, box-shadow .13s, background .13s;
 }
 .icon-btn:active { transform: scale(.88); }
 .icon-btn:hover  { box-shadow: var(--sh-sm); background: var(--surface-2); }
 .send-btn {
-  width: 46px; padding: 8px; border-radius: var(--radius-sm); border: none;
-  background: linear-gradient(135deg, #25d366, #1aaa50);
+  width: 42px; padding: 7px; border-radius: 12px; border: none;
+  background: linear-gradient(135deg, #22c55e, #0eae4b);
   color: #fff; font-size: 15px;
-  box-shadow: 0 4px 14px rgba(37,211,102,.3);
+  box-shadow: 0 7px 16px rgba(34,197,94,.25);
   transition: transform .13s, box-shadow .13s;
 }
 .send-btn:active { transform: scale(.88); box-shadow: 0 2px 6px rgba(37,211,102,.2); }
@@ -1355,7 +1385,8 @@ body.notification-open { overflow: hidden; touch-action: none; }
   font-variant-numeric: tabular-nums;
 }
 .electricity-pay-spacer { flex: 1; }
-.meter-filter-row { display: flex; gap: 8px; margin: 0 0 10px; }
+.meter-filter-row { display: flex; gap: 8px; margin: 0 0 10px; flex-wrap: wrap; }
+.electricity-sep-chip { background: #eef2ff !important; color: #4f46e5 !important; }
 .msg-type-badge {
   padding: 3px 9px; border-radius: 99px;
   font-size: 10px; font-weight: 850; white-space: nowrap;
@@ -1414,15 +1445,21 @@ body.notification-open { overflow: hidden; touch-action: none; }
   .wrap { padding-top: 12px; padding-bottom: 28px; }
   .stat-card { min-height: 104px; padding: 14px; }
   .card {
-    grid-template-rows: 158px 136px 40px;
-    height: 334px;
+    grid-template-rows: 126px 126px;
+    height: 252px;
+    border-radius: 20px;
   }
-  .card-top { padding: 12px 12px 10px; }
+  .card-top { padding: 15px 14px 13px 18px; gap: 10px; }
+  .apt-label { margin-bottom: 6px; }
+  .apt-name { font-size: 15px; margin-bottom: 5px; }
+  .rent-amt { font-size: 15px; padding: 8px 10px; border-radius: 12px; }
   .card-actions {
-    padding: 8px 10px 10px; gap: 6px;
-    grid-template-rows: 56px 42px;
+    padding: 10px 10px 11px; gap: 8px 6px;
+    grid-template-rows: 58px 38px;
   }
-  .action-btn { min-height: 42px; font-size: 10px; padding: 7px 5px; }
+  .action-btn { height: 58px; min-height: 0; font-size: 10px; padding: 7px 4px; border-radius: 12px; }
+  .action-btn small, .prepay-btn small, .deposit-btn small { font-size: 8px; }
+  .icon-btn, .send-btn { width: 40px; border-radius: 11px; }
   .msg-sheet { padding: 16px; border-radius: 20px; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -1525,6 +1562,11 @@ body.notification-open { overflow: hidden; touch-action: none; }
         <span id="meterPaidToggleIcon"></span>
         <span id="meterPaidToggleLabel">Show Paid</span>
         <span class="paid-count-badge" id="meterPaidCountBadge">0</span>
+      </button>
+      <button class="chip paid-toggle-chip" id="meterSepToggleBtn" onclick="toggleMeterShowSeparate()" style="display:none">
+        <span id="meterSepToggleIcon"></span>
+        <span id="meterSepToggleLabel">Separate subscribers</span>
+        <span class="paid-count-badge" id="meterSepCountBadge">0</span>
       </button>
     </div>
     <div class="electricity-summary">
@@ -1725,6 +1767,7 @@ var reportOpen = false;
 var longPressTimer = null;
 var showPaid = false;  // hide fully-paid cards by default
 var meterShowPaid = false;      // electricity tab: hide paid offices by default
+var meterShowSeparate = false;  // electricity tab: hide separate subscribers by default
 var notificationApt = '';
 var notificationType = 'elec';  // 'rent' | 'elec' — which message the modal shows
 
@@ -2949,6 +2992,22 @@ function toggleMeterShowPaid() {
   renderMeterPanel();
 }
 
+function toggleMeterShowSeparate() {
+  meterShowSeparate = !meterShowSeparate;
+  renderMeterPanel();
+}
+
+// "Separate subscriber" — the office contracts electricity directly with the
+// utility company: no meter reading in any month and no internet billed by us.
+function isSeparateSubscriber(t) {
+  if (t.internet) return false;
+  return !Object.keys(elecMap).some(function(k) {
+    if (k.indexOf('_') === -1) return false;
+    var r = elecMap[k];
+    return r && officeKey(r.apt) === officeKey(t.apt) && (r.t1current !== undefined || r.serial);
+  });
+}
+
 /* ═══════════════════════════════════════════════
    SEARCH & FILTERS
 ═══════════════════════════════════════════════ */
@@ -3488,7 +3547,33 @@ function renderMeterPanel() {
     return ((paymentRow(meterMonth, apt) || {}).elecStatus) === 'paid';
   }
 
-  var paidList = tenants.filter(function(t) { return meterIsPaid(t.apt); });
+  // ── Separate subscribers (own electricity contract) ──
+  var sepCount = tenants.filter(isSeparateSubscriber).length;
+  var base = meterShowSeparate ? tenants.slice() : tenants.filter(function(t) { return !isSeparateSubscriber(t); });
+
+  var sepBtn   = document.getElementById('meterSepToggleBtn');
+  var sepLabel = document.getElementById('meterSepToggleLabel');
+  var sepIcon  = document.getElementById('meterSepToggleIcon');
+  var sepBadge = document.getElementById('meterSepCountBadge');
+  if (sepBtn) {
+    if (sepCount > 0) {
+      sepBtn.style.display = '';
+      sepBadge.textContent = sepCount;
+      if (meterShowSeparate) {
+        sepBtn.classList.add('active');
+        sepIcon.textContent  = '✓ ';
+        sepLabel.textContent = 'Separate subscribers';
+      } else {
+        sepBtn.classList.remove('active');
+        sepIcon.textContent  = '';
+        sepLabel.textContent = 'Separate subscribers';
+      }
+    } else {
+      sepBtn.style.display = 'none';
+    }
+  }
+
+  var paidList = base.filter(function(t) { return meterIsPaid(t.apt); });
   var paidCount = paidList.length;
 
   var toggleBtn   = document.getElementById('meterPaidToggleBtn');
@@ -3513,7 +3598,7 @@ function renderMeterPanel() {
     }
   }
 
-  var visible = meterShowPaid ? tenants.slice() : tenants.filter(function(t) { return !meterIsPaid(t.apt); });
+  var visible = meterShowPaid ? base : base.filter(function(t) { return !meterIsPaid(t.apt); });
   if (!visible.length) {
     container.innerHTML = '<div class="meter-empty">All paid ✓</div>';
     updateMeterSummary();
@@ -3564,6 +3649,7 @@ function renderMeterPanel() {
           '</div>' +
         '</div>' +
         '<div class="electricity-context">' +
+          (isSeparateSubscriber(t) ? '<span class="electricity-sep-chip">🔌 Separate subscriber</span>' : '') +
           '<span>Serial ' + meterText(serial) + '</span>' +
           '<span>Previous · ' + meterText(previous) + '</span>' +
           (hasInternet ? '<span>📶 Internet · 5,000 ֏</span>' : '') +
