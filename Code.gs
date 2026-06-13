@@ -9,6 +9,11 @@ const SHEETS = {
   PAYMENTS:    'Payments'
 };
 
+const DOCUMENT_TEMPLATES = {
+  CONTRACT:  '18KXoWKBBJmPXuu2XodYLgDH0tIHq-ObyeSZJ79MBtZs',
+  EXTENSION: '1hckilys6i1daEf1Wv-9-PCJFhAASrAciiim3Qzky0FE'
+};
+
 
 // â”€â”€ Electricity tariff rates (AMD per kWh) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const AMD_PER_KWH_DAY   = 54;   // T1 Day tariff   â€” edit here
@@ -54,6 +59,8 @@ function doGet(e) {
     if (action === 'repairMeterHistory') return json(e, repairMeterHistory_(e.parameter));
     if (action === 'deletePayment') return json(e, deletePayment_(e.parameter));
     if (action === 'updateTenant')  return json(e, updateTenant_(e.parameter));
+    if (action === 'generateContract') return json(e, generateContract_(e.parameter));
+    if (action === 'generateExtension') return json(e, generateExtension_(e.parameter));
     if (action === 'test')          return json(e, runTest_());
     return json(e, { ok: false, error: 'Unknown action: ' + action });
   } catch (err) {
@@ -890,6 +897,128 @@ function setTenantCell_(sh, row, map, possibleHeaders, value) {
     }
   }
   throw new Error('Missing tenants column: ' + possibleHeaders[0]);
+}
+
+// Contract templates are copied as-is; only {{VARIABLE}} markers are replaced.
+function generateContract_(p) {
+  const values = commonDocumentValues_(p);
+  values.WING = contractWing_(p.wing);
+  values.UNIT_DESCRIPTION = contractUnit_(p.unitDescription);
+  values.TERM_START = documentDate_(p.termStart);
+  values.TERM_END = documentDate_(p.termEnd);
+  values.MONTHLY_RENT = documentMoney_(p.monthlyRent);
+  values.RENT_IN_WORDS = String(p.rentInWords || '').trim();
+  values.PAYMENT_DAY = String(p.paymentDay || '').trim();
+  values.FIRST_PAYMENT_DATE = documentDate_(p.firstPaymentDate);
+  values.DEPOSIT_PAYMENT_DATE = documentDate_(p.depositPaymentDate);
+
+  return createFromDocumentTemplate_(
+    DOCUMENT_TEMPLATES.CONTRACT,
+    'Պայմանագիր - ' + values.TENANT_NAME + ' - ' + values.DOCUMENT_DATE,
+    values
+  );
+}
+
+function generateExtension_(p) {
+  const values = commonDocumentValues_(p);
+  values.EXTENSION_NUMBER = String(p.extensionNumber || '1').trim();
+  values.ORIGINAL_CONTRACT_DATE = documentDate_(p.originalContractDate);
+  values.WING = String(p.wing || '').trim();
+  values.UNIT_DESCRIPTION = extensionUnit_(p.unitDescription);
+  values.EXTENSION_PERIOD_TEXT = String(p.extensionPeriodText || '').trim();
+  values.EXTENSION_START = documentDate_(p.termStart);
+  values.EXTENSION_END = documentDate_(p.termEnd);
+  values.SPECIAL_PERIOD_START = documentDate_(p.specialPeriodStart);
+  values.SPECIAL_PERIOD_END = documentDate_(p.specialPeriodEnd);
+  values.SPECIAL_RENT_AMOUNT = documentMoney_(p.specialRentAmount || p.monthlyRent);
+  values.SPECIAL_RENT_IN_WORDS = String(p.specialRentInWords || p.rentInWords || '').trim();
+  values.SPECIAL_PAYMENT_DEADLINE = documentDate_(p.specialPaymentDeadline);
+
+  return createFromDocumentTemplate_(
+    DOCUMENT_TEMPLATES.EXTENSION,
+    'Լրացուցիչ համաձայնագիր թիվ ' + values.EXTENSION_NUMBER + ' - ' +
+      values.TENANT_NAME + ' - ' + values.DOCUMENT_DATE,
+    values
+  );
+}
+
+function commonDocumentValues_(p) {
+  return {
+    CITY: String(p.city || 'ք. Երևան').trim(),
+    DOCUMENT_DATE: documentDate_(p.documentDate),
+    TENANT_NAME: String(p.tenantName || '').trim(),
+    PROPERTY_ADDRESS: String(p.propertyAddress || '').trim(),
+    FLOOR: String(p.floor || '').trim().replace(/\s*հարկ$/i, ''),
+    PURPOSE: String(p.purpose || '').trim(),
+    TENANT_ADDRESS: String(p.tenantAddress || p.legalAddress || '').trim(),
+    TENANT_TAX_ID: String(p.hvhh || '').trim(),
+    TENANT_BANK: String(p.tenantBank || '').trim(),
+    TENANT_BANK_ACCOUNT: String(p.tenantBankAccount || '').trim(),
+    TENANT_PHONE: String(p.phone || '').trim()
+  };
+}
+
+function createFromDocumentTemplate_(templateId, name, values) {
+  const template = DriveApp.getFileById(templateId);
+  const parentIterator = template.getParents();
+  const folder = parentIterator.hasNext() ? parentIterator.next() : null;
+  const copy = folder ? template.makeCopy(name, folder) : template.makeCopy(name);
+  const document = DocumentApp.openById(copy.getId());
+  const body = document.getBody();
+
+  Object.keys(values).forEach(key => {
+    body.replaceText(
+      '\\{\\{' + key + '\\}\\}',
+      safeDocumentReplacement_(values[key])
+    );
+  });
+
+  document.saveAndClose();
+
+  const remaining = DocumentApp.openById(copy.getId()).getBody().getText().match(/\{\{[A-Z0-9_]+\}\}/g);
+  if (remaining && remaining.length) {
+    copy.setTrashed(true);
+    throw new Error('Unfilled template variables: ' + remaining.join(', '));
+  }
+
+  const pdfBlob = copy.getBlob().getAs(MimeType.PDF).setName(name + '.pdf');
+  const pdfFile = folder ? folder.createFile(pdfBlob) : DriveApp.createFile(pdfBlob);
+  return {
+    ok: true,
+    docUrl: 'https://docs.google.com/document/d/' + copy.getId() + '/edit',
+    pdfUrl: pdfFile.getUrl()
+  };
+}
+
+function safeDocumentReplacement_(value) {
+  return String(value == null ? '' : value).replace(/\\/g, '\\\\').replace(/\$/g, '\\$');
+}
+
+function documentDate_(value) {
+  const text = String(value || '').trim();
+  if (!text) return '';
+  const iso = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return iso[3] + '.' + iso[2] + '.' + iso[1];
+  return text.replace(/թ\.?$/, '');
+}
+
+function documentMoney_(value) {
+  const number = Math.round(num_(value));
+  return number ? number.toLocaleString('en-US') : '';
+}
+
+function contractWing_(value) {
+  const wing = String(value || '').trim();
+  if (!wing) return '';
+  return /ից$/.test(wing) ? wing : wing + 'ից';
+}
+
+function contractUnit_(value) {
+  return String(value || '').trim().replace(/տարածք(?:ը|ի)?$/, 'տարածքը');
+}
+
+function extensionUnit_(value) {
+  return String(value || '').trim().replace(/տարածք(?:ը|ի)?$/, 'տարածքի');
 }
 
 // â”€â”€ TEST (open ?action=test in browser to diagnose) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hy">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -1818,7 +1818,8 @@ body.notification-open { overflow: hidden; touch-action: none; }
       <div class="contract-section-title">Property and terms</div>
       <div class="contract-grid">
         <div class="field"><label>Property address</label><input type="text" id="docPropertyAddress" value="ՀՀ Երևան, Կենտրոն վարչ. շրջան, Արշակունյաց պող. թիվ 4"></div>
-        <div class="field"><label>Floor</label><input type="text" id="docFloor" value="11-րդ հարկ"></div>
+        <div class="field"><label>Floor designation</label><input type="text" id="docFloor" value="11-րդ"></div>
+        <div class="field"><label>Wing</label><input type="text" id="docWing" value="Աջ թև"></div>
         <div class="field"><label>Unit description</label><input type="text" id="docUnit"></div>
         <div class="field"><label>Purpose</label><input type="text" id="docPurpose" value="գրասենյակ"></div>
         <div class="field"><label>Term start</label><input type="date" id="docTermStart" onchange="updateDocPreview()"></div>
@@ -1827,6 +1828,9 @@ body.notification-open { overflow: hidden; touch-action: none; }
         <div class="field"><label>Payment day</label><input type="number" id="docPaymentDay" min="1" max="31"></div>
         <div class="field"><label>First payment date</label><input type="date" id="docFirstPaymentDate"></div>
         <div class="field"><label>Deposit payment date</label><input type="date" id="docDepositDate"></div>
+        <div class="field"><label>Tenant address</label><input type="text" id="docTenantAddress"></div>
+        <div class="field"><label>Tenant bank</label><input type="text" id="docTenantBank"></div>
+        <div class="field"><label>Tenant bank account</label><input type="text" id="docTenantBankAccount"></div>
       </div>
     </div>
 
@@ -1834,7 +1838,10 @@ body.notification-open { overflow: hidden; touch-action: none; }
       <div class="contract-section-title">Extension terms</div>
       <div class="contract-grid">
         <div class="field"><label>Extension number</label><input type="number" id="docExtensionNumber" min="1" value="1"></div>
+        <div class="field"><label>Original contract date</label><input type="date" id="docOriginalContractDate"></div>
         <div class="field"><label>Extension period text</label><input type="text" id="docExtensionPeriod" value="մեկ (1) ամսով"></div>
+        <div class="field"><label>Special period start</label><input type="date" id="docSpecialPeriodStart"></div>
+        <div class="field"><label>Special period end</label><input type="date" id="docSpecialPeriodEnd"></div>
         <div class="field"><label>Special rent amount (optional)</label><input type="number" id="docSpecialRent"></div>
         <div class="field"><label>Special payment deadline</label><input type="date" id="docSpecialDeadline"></div>
       </div>
@@ -1871,8 +1878,7 @@ body.notification-open { overflow: hidden; touch-action: none; }
 /* ═══════════════════════════════════════════════
    CONSTANTS & STATE
 ═══════════════════════════════════════════════ */
-var API = 'https://script.google.com/macros/s/AKfycbyb0lCMNScmwJ8SYBg-UVv8HszqwGwH01yv4RFxzsjB3dQCh8qExtfQFCggTXfsWELc/exec';
-var CONTRACT_API = 'https://script.google.com/macros/s/AKfycby3kerA22ijBto3TMYrbhBWkMQOb3lPe440g5lzkie4WiegLe0oo4uk9M4mQqg1FYmp/exec';
+var API = 'https://script.google.com/macros/s/AKfycbxNRT-EeqejB2zTG6tC67-XUk-pWrFswea0lZO8UFFFkYl-SDi5UXQ6qjTO_ZSJ_htX/exec';
 
 /* Race fetch (no credentials) against JSONP — fastest winner used.
    fetch omits cookies so Google won't redirect the owner's account to auth. */
@@ -3262,16 +3268,47 @@ function fillDocFromTenant() {
   document.getElementById('docPaymentDay').value = t.paymentDate || t.day || '';
   document.getElementById('docFirstPaymentDate').value = dateInputValue(t.startDate);
   document.getElementById('docDepositDate').value = dateInputValue(t.startDate);
+  document.getElementById('docTenantAddress').value = t.legalAddress || t.physicalAddress || '';
+  document.getElementById('docTenantBank').value = t.tenantBank || '';
+  document.getElementById('docTenantBankAccount').value = t.tenantBankAccount || '';
+  document.getElementById('docOriginalContractDate').value = dateInputValue(t.startDate);
+  document.getElementById('docSpecialPeriodStart').value = dateInputValue(t.startDate);
+  document.getElementById('docSpecialPeriodEnd').value = dateInputValue(t.endDate);
+  document.getElementById('docSpecialRent').value = t.rent || '';
   updateDocPreview();
 }
 
 function changeDocType() {
   var isExtension = document.getElementById('docType').value === 'extension';
+  var tenant = selectedDocTenant();
   document.getElementById('extensionFields').style.display = isExtension ? '' : 'none';
   document.getElementById('docDateLabel').textContent = isExtension ? 'Agreement date' : 'Contract date';
   document.getElementById('docGenerateBtn').textContent = isExtension ? 'Generate extension DOC + PDF' : 'Generate contract DOC + PDF';
+  if (tenant) {
+    if (isExtension) {
+      var currentEnd = dateInputValue(tenant.endDate);
+      document.getElementById('docOriginalContractDate').value = dateInputValue(tenant.startDate);
+      document.getElementById('docTermStart').value = currentEnd;
+      document.getElementById('docTermEnd').value = addMonthsToInputDate(currentEnd, 1);
+      document.getElementById('docSpecialPeriodStart').value = addMonthsToInputDate(currentEnd, -1);
+      document.getElementById('docSpecialPeriodEnd').value = currentEnd;
+    } else {
+      document.getElementById('docTermStart').value = dateInputValue(tenant.startDate);
+      document.getElementById('docTermEnd').value = dateInputValue(tenant.endDate);
+    }
+  }
   updateDocDatePreview();
   updateDocPreview();
+}
+
+function addMonthsToInputDate(value, months) {
+  if (!value) return '';
+  var parts = value.split('-').map(Number);
+  if (parts.length !== 3) return '';
+  var date = new Date(parts[0], parts[1] - 1 + months, parts[2]);
+  return date.getFullYear() + '-' +
+    String(date.getMonth() + 1).padStart(2, '0') + '-' +
+    String(date.getDate()).padStart(2, '0');
 }
 
 function updateDocDatePreview() {
@@ -3305,6 +3342,7 @@ function docPayload() {
     city: document.getElementById('docCity').value.trim(),
     propertyAddress: document.getElementById('docPropertyAddress').value.trim(),
     floor: document.getElementById('docFloor').value.trim(),
+    wing: document.getElementById('docWing').value.trim(),
     unitDescription: document.getElementById('docUnit').value.trim(),
     purpose: document.getElementById('docPurpose').value.trim(),
     termStart: document.getElementById('docTermStart').value,
@@ -3314,9 +3352,16 @@ function docPayload() {
     paymentDay: document.getElementById('docPaymentDay').value,
     firstPaymentDate: document.getElementById('docFirstPaymentDate').value,
     depositPaymentDate: document.getElementById('docDepositDate').value,
+    tenantAddress: document.getElementById('docTenantAddress').value.trim(),
+    tenantBank: document.getElementById('docTenantBank').value.trim(),
+    tenantBankAccount: document.getElementById('docTenantBankAccount').value.trim(),
     extensionNumber: document.getElementById('docExtensionNumber').value,
+    originalContractDate: document.getElementById('docOriginalContractDate').value,
     extensionPeriodText: document.getElementById('docExtensionPeriod').value.trim(),
+    specialPeriodStart: document.getElementById('docSpecialPeriodStart').value,
+    specialPeriodEnd: document.getElementById('docSpecialPeriodEnd').value,
     specialRentAmount: document.getElementById('docSpecialRent').value,
+    specialRentInWords: hyAmountWords(document.getElementById('docSpecialRent').value || document.getElementById('docRent').value),
     specialPaymentDeadline: document.getElementById('docSpecialDeadline').value
   };
 }
@@ -3328,8 +3373,14 @@ function validateDocPayload(p) {
   if (!p.termStart) missing.push('term start');
   if (!p.termEnd) missing.push('term end');
   if (!p.monthlyRent) missing.push('monthly rent');
-  if (!p.paymentDay) missing.push('payment day');
   if (!p.unitDescription) missing.push('unit');
+  if (p.type === 'contract' && !p.paymentDay) missing.push('payment day');
+  if (p.type === 'contract' && !p.firstPaymentDate) missing.push('first payment date');
+  if (p.type === 'contract' && !p.depositPaymentDate) missing.push('deposit payment date');
+  if (p.type === 'extension' && !p.originalContractDate) missing.push('original contract date');
+  if (p.type === 'extension' && !p.specialPeriodStart) missing.push('special period start');
+  if (p.type === 'extension' && !p.specialPeriodEnd) missing.push('special period end');
+  if (p.type === 'extension' && !p.specialPaymentDeadline) missing.push('special payment deadline');
   if (missing.length) return 'Missing: ' + missing.join(', ');
   if (p.hvhh && !/^\d{8}$/.test(String(p.hvhh))) return 'ՀՎՀՀ must contain exactly 8 digits.';
   if (p.phone && !/^\+?374\s?\d{2}\s?\d{6}$/.test(String(p.phone).replace(/[-()]/g, '').trim())) return 'Phone should be in +374 format.';
@@ -3365,7 +3416,7 @@ function generateDocument() {
   var btn = document.getElementById('docGenerateBtn');
   btn.disabled = true; btn.textContent = 'Generating...';
   var action = p.type === 'extension' ? 'generateExtension' : 'generateContract';
-  var url = CONTRACT_API + '?action=' + action;
+  var url = API + '?action=' + action;
   Object.keys(p).forEach(function(k) { url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(p[k] || ''); });
   jsonpRetry(url, 2).then(function(res) {
     if (!res || !res.ok) throw new Error((res && res.error) || 'Generation failed');
