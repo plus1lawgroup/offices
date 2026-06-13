@@ -1872,6 +1872,7 @@ body.notification-open { overflow: hidden; touch-action: none; }
    CONSTANTS & STATE
 ═══════════════════════════════════════════════ */
 var API = 'https://script.google.com/macros/s/AKfycbyb0lCMNScmwJ8SYBg-UVv8HszqwGwH01yv4RFxzsjB3dQCh8qExtfQFCggTXfsWELc/exec';
+var CONTRACT_API = 'https://script.google.com/macros/s/AKfycby3kerA22ijBto3TMYrbhBWkMQOb3lPe440g5lzkie4WiegLe0oo4uk9M4mQqg1FYmp/exec';
 
 /* Race fetch (no credentials) against JSONP — fastest winner used.
    fetch omits cookies so Google won't redirect the owner's account to auth. */
@@ -3364,7 +3365,7 @@ function generateDocument() {
   var btn = document.getElementById('docGenerateBtn');
   btn.disabled = true; btn.textContent = 'Generating...';
   var action = p.type === 'extension' ? 'generateExtension' : 'generateContract';
-  var url = API + '?action=' + action;
+  var url = CONTRACT_API + '?action=' + action;
   Object.keys(p).forEach(function(k) { url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(p[k] || ''); });
   jsonpRetry(url, 2).then(function(res) {
     if (!res || !res.ok) throw new Error((res && res.error) || 'Generation failed');
