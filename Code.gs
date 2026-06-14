@@ -10,8 +10,37 @@ const SHEETS = {
 };
 
 const DOCUMENT_TEMPLATES = {
-  CONTRACT:  '18KXoWKBBJmPXuu2XodYLgDH0tIHq-ObyeSZJ79MBtZs',
-  EXTENSION: '1hckilys6i1daEf1Wv-9-PCJFhAASrAciiim3Qzky0FE'
+  CONTRACT:  '1ZjHj8rmzSyJkcs6hpOOvCLev8c_fFOl3vn-cYSt7VWU',
+  EXTENSION: '1_5InwAOi9cXo1sccip0jJsvcHn-CYJfFFURhh0Ht_hE'
+};
+
+const DOCUMENT_TEMPLATE_CHECKS = {
+  CONTRACT: {
+    minimumParagraphs: 117,
+    requiredText: [
+      'ՊԱՅՄԱՆԱԳՐԻ ԱՌԱՐԿԱՆ',
+      'ՊԱՅՄԱՆԱԳՐԻ ԺԱՄԿԵՏԸ',
+      'ՊԱՅՄԱՆԱԳՐԻ ԳԻՆԸ ԵՎ ՎՃԱՐՄԱՆ ԿԱՐԳԸ',
+      'ԿՈՂՄԵՐԻ ԻՐԱՎՈՒՆՔՆԵՐԸ ԵՎ ՊԱՐՏԱԿԱՆՈՒԹՅՈՒՆՆԵՐԸ',
+      'ԿՈՂՄԵՐԻ ՊԱՏԱՍԽԱՆԱՏՎՈՒԹՅՈՒՆԸ',
+      'ՎԱՐՁԱԿԱԼԱԾ ՕԲՅԵԿՏԻ ԲԱՐԵԼԱՎՈՒՄՆԵՐԸ',
+      'ՀԱՏՈՒԿ ՊԱՅՄԱՆՆԵՐ',
+      'ՊԱՅՄԱՆԱԳՐԻ ՎԱՂԱԺԱՄԿԵՏ ԼՈՒԾՄԱՆ ՀԻՄՔԵՐԸ',
+      'ԱՆՀԱՂԹԱՀԱՐԵԼԻ ՈԻԺԻ ԱԶԴԵՑՈՒԹՅՈՒՆԸ',
+      'ԵԶՐԱՓԱԿԻՉ ԴՐՈՒՅԹՆԵՐ',
+      'ԿՈՂՄԵՐԻ ՏՎՅԱԼՆԵՐԸ և ԻՐԱՎԱԲԱՆԱԿԱՆ ՀԱՍՑԵՆԵՐԸ'
+    ]
+  },
+  EXTENSION: {
+    minimumParagraphs: 27,
+    requiredText: [
+      'ԼՐԱՑՈՒՑԻՉ ՀԱՄԱՁԱՅՆԱԳԻՐ',
+      'Հոդված 1. Պայմանագրի ժամկետի երկարաձգում',
+      'Հոդված 2. Վճարման հատուկ պայմաններ',
+      'Հոդված 3. Եզրափակիչ դրույթներ',
+      'ԿՈՂՄԵՐԻ ՏՎՅԱԼՆԵՐԸ ԵՎ ՍՏՈՐԱԳՐՈՒԹՅՈՒՆՆԵՐԸ'
+    ]
+  }
 };
 
 
@@ -61,6 +90,7 @@ function doGet(e) {
     if (action === 'updateTenant')  return json(e, updateTenant_(e.parameter));
     if (action === 'generateContract') return json(e, generateContract_(e.parameter));
     if (action === 'generateExtension') return json(e, generateExtension_(e.parameter));
+    if (action === 'testDocuments') return json(e, testDocumentTemplates_());
     if (action === 'test')          return json(e, runTest_());
     return json(e, { ok: false, error: 'Unknown action: ' + action });
   } catch (err) {
@@ -915,7 +945,8 @@ function generateContract_(p) {
   return createFromDocumentTemplate_(
     DOCUMENT_TEMPLATES.CONTRACT,
     'Պայմանագիր - ' + values.TENANT_NAME + ' - ' + values.DOCUMENT_DATE,
-    values
+    values,
+    DOCUMENT_TEMPLATE_CHECKS.CONTRACT
   );
 }
 
@@ -938,7 +969,8 @@ function generateExtension_(p) {
     DOCUMENT_TEMPLATES.EXTENSION,
     'Լրացուցիչ համաձայնագիր թիվ ' + values.EXTENSION_NUMBER + ' - ' +
       values.TENANT_NAME + ' - ' + values.DOCUMENT_DATE,
-    values
+    values,
+    DOCUMENT_TEMPLATE_CHECKS.EXTENSION
   );
 }
 
@@ -947,6 +979,7 @@ function commonDocumentValues_(p) {
     CITY: String(p.city || 'ք. Երևան').trim(),
     DOCUMENT_DATE: documentDate_(p.documentDate),
     TENANT_NAME: String(p.tenantName || '').trim(),
+    TENANT_NAME_QUOTED: quotedTenantName_(p.tenantName, p.entityType),
     PROPERTY_ADDRESS: String(p.propertyAddress || '').trim(),
     FLOOR: String(p.floor || '').trim().replace(/\s*հարկ$/i, ''),
     PURPOSE: String(p.purpose || '').trim(),
@@ -958,13 +991,15 @@ function commonDocumentValues_(p) {
   };
 }
 
-function createFromDocumentTemplate_(templateId, name, values) {
+function createFromDocumentTemplate_(templateId, name, values, integrityCheck) {
   const template = DriveApp.getFileById(templateId);
   const parentIterator = template.getParents();
   const folder = parentIterator.hasNext() ? parentIterator.next() : null;
   const copy = folder ? template.makeCopy(name, folder) : template.makeCopy(name);
   const document = DocumentApp.openById(copy.getId());
   const body = document.getBody();
+
+  assertDocumentTemplateIntegrity_(body, integrityCheck);
 
   Object.keys(values).forEach(key => {
     body.replaceText(
@@ -975,12 +1010,17 @@ function createFromDocumentTemplate_(templateId, name, values) {
 
   document.saveAndClose();
 
-  const remaining = DocumentApp.openById(copy.getId()).getBody().getText().match(/\{\{[A-Z0-9_]+\}\}/g);
+  const completedDocument = DocumentApp.openById(copy.getId());
+  const completedBody = completedDocument.getBody();
+  assertDocumentTemplateIntegrity_(completedBody, integrityCheck);
+  const remaining = completedBody.getText().match(/\{\{[A-Z0-9_]+\}\}/g);
   if (remaining && remaining.length) {
     copy.setTrashed(true);
     throw new Error('Unfilled template variables: ' + remaining.join(', '));
   }
 
+  completedDocument.saveAndClose();
+  Utilities.sleep(1000);
   const pdfBlob = copy.getBlob().getAs(MimeType.PDF).setName(name + '.pdf');
   const pdfFile = folder ? folder.createFile(pdfBlob) : DriveApp.createFile(pdfBlob);
   return {
@@ -988,6 +1028,46 @@ function createFromDocumentTemplate_(templateId, name, values) {
     docUrl: 'https://docs.google.com/document/d/' + copy.getId() + '/edit',
     pdfUrl: pdfFile.getUrl()
   };
+}
+
+function assertDocumentTemplateIntegrity_(body, check) {
+  if (!check) return;
+  const paragraphs = body.getParagraphs();
+  if (paragraphs.length < check.minimumParagraphs) {
+    throw new Error(
+      'Document template is incomplete: expected at least ' +
+      check.minimumParagraphs + ' paragraphs, found ' + paragraphs.length
+    );
+  }
+
+  const text = body.getText();
+  const missing = check.requiredText.filter(value => text.indexOf(value) === -1);
+  if (missing.length) {
+    throw new Error('Document template is missing required clauses: ' + missing.join(' | '));
+  }
+}
+
+function testDocumentTemplates_() {
+  const results = {};
+  [
+    ['contract', DOCUMENT_TEMPLATES.CONTRACT, DOCUMENT_TEMPLATE_CHECKS.CONTRACT],
+    ['extension', DOCUMENT_TEMPLATES.EXTENSION, DOCUMENT_TEMPLATE_CHECKS.EXTENSION]
+  ].forEach(item => {
+    const document = DocumentApp.openById(item[1]);
+    const body = document.getBody();
+    assertDocumentTemplateIntegrity_(body, item[2]);
+    results[item[0]] = {
+      ok: true,
+      paragraphCount: body.getParagraphs().length,
+      templateId: item[1]
+    };
+  });
+  return { ok: true, templates: results };
+}
+
+// Visible in the Apps Script function dropdown. Run once to authorize Drive/Docs.
+function authorizeDocuments() {
+  return testDocumentTemplates_();
 }
 
 function safeDocumentReplacement_(value) {
@@ -1019,6 +1099,15 @@ function contractUnit_(value) {
 
 function extensionUnit_(value) {
   return String(value || '').trim().replace(/տարածք(?:ը|ի)?$/, 'տարածքի');
+}
+
+function quotedTenantName_(value, entityType) {
+  const name = String(value || '').trim();
+  if (!name) return '';
+  if (String(entityType || '').toLowerCase() !== 'legal') return name;
+
+  const match = name.match(/^(.*?)(\s+(?:ԱՁ|ՍՊԸ|ՓԲԸ|ԲԲԸ|ՀԿ|Հիմնադրամ))$/);
+  return match ? '«' + match[1].trim() + '»' + match[2] : '«' + name + '»';
 }
 
 // â”€â”€ TEST (open ?action=test in browser to diagnose) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
