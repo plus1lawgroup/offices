@@ -815,8 +815,9 @@ canvas#reportChart { width: 100%; height: 130px; border-radius: 8px; }
 /* Icon buttons */
 .quick-btns {
   grid-column: 1 / -1;
-  display: flex; gap: 7px; justify-content: flex-end; align-items: stretch;
+  display: flex; gap: 5px; justify-content: flex-end; align-items: stretch;
 }
+.quick-btns > button { flex: 1 1 0; min-width: 0; max-width: 42px; }
 .icon-btn {
   width: 42px; padding: 7px; border-radius: 12px;
   border: 1px solid rgba(203,213,225,.9);
@@ -1875,11 +1876,14 @@ body.notification-open { overflow: hidden; touch-action: none; }
   </div>
 </div>
 
+<input type="file" id="tenantFileInput" hidden>
+
 <script>
 /* ═══════════════════════════════════════════════
    CONSTANTS & STATE
 ═══════════════════════════════════════════════ */
-var API = 'https://script.google.com/macros/s/AKfycbzfDz7pQXQrlGGjjHqooSzMctOZczsjm33-IV_qrBptC6dntVF_Qynq-BqxGDAYEU53/exec';
+var API = 'https://script.google.com/macros/s/AKfycbxDiSuSHibVs2IqEM5ToMyvNNcdvqblps0d3nAFMzNWedOcGS9e8ZssChMAgfSFvhIJ/exec';
+var uploadTenantApt = '';
 
 /* Race fetch (no credentials) against JSONP — fastest winner used.
    fetch omits cookies so Google won't redirect the owner's account to auth. */
@@ -3237,6 +3241,78 @@ function hyAmountWords(n) {
   return parts.join(' ');
 }
 
+function tenantDocumentParams(apt) {
+  var tenant = tenants.find(function(t) { return String(t.apt) === String(apt); });
+  return {
+    apt: tenant ? tenant.apt : apt,
+    tenantName: tenant ? tenantDisplayName(tenant) : ''
+  };
+}
+
+function openTenantFolder(apt) {
+  var target = window.open('about:blank', '_blank');
+  var p = tenantDocumentParams(apt);
+  var url = API + '?action=getTenantFolder&apt=' + encodeURIComponent(p.apt) +
+    '&tenantName=' + encodeURIComponent(p.tenantName);
+  toast('Opening tenant folder...', 'success');
+  jsonpRetry(url, 2, 30000).then(function(res) {
+    if (!res || !res.ok || !res.folderUrl) throw new Error((res && res.error) || 'Could not open folder');
+    if (target) target.location.href = res.folderUrl;
+    else window.open(res.folderUrl, '_blank');
+  }).catch(function(err) {
+    if (target) target.close();
+    toast((err && err.message) || 'Could not open folder', 'error');
+  });
+}
+
+function chooseTenantFile(apt) {
+  uploadTenantApt = apt;
+  var input = document.getElementById('tenantFileInput');
+  input.value = '';
+  input.click();
+}
+
+document.getElementById('tenantFileInput').addEventListener('change', function() {
+  var file = this.files && this.files[0];
+  if (!file || !uploadTenantApt) return;
+  if (file.size > 15 * 1024 * 1024) {
+    toast('File is too large. Maximum size is 15 MB.', 'error');
+    return;
+  }
+
+  var apt = uploadTenantApt;
+  var p = tenantDocumentParams(apt);
+  var reader = new FileReader();
+  toast('Uploading ' + file.name + '...', 'success');
+  reader.onload = function() {
+    var fileData = String(reader.result || '').split(',')[1] || '';
+    var body = new URLSearchParams({
+      action: 'uploadTenantFile',
+      apt: String(p.apt || ''),
+      tenantName: p.tenantName || '',
+      fileName: file.name,
+      mimeType: file.type || 'application/octet-stream',
+      fileData: fileData
+    });
+    fetch(API, {
+      method: 'POST',
+      credentials: 'omit',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+      body: body.toString()
+    }).then(function(response) {
+      if (!response.ok) throw new Error('Upload failed: HTTP ' + response.status);
+      return response.json();
+    }).then(function(res) {
+      if (!res || !res.ok) throw new Error((res && res.error) || 'Upload failed');
+      toast('Uploaded: ' + res.fileName, 'success');
+    }).catch(function(err) {
+      toast((err && err.message) || 'Upload failed', 'error');
+    });
+  };
+  reader.onerror = function() { toast('Could not read the selected file', 'error'); };
+  reader.readAsDataURL(file);
+});
+
 function openContractWizard(apt) {
   if (!document.getElementById('docDate').value) {
     document.getElementById('docDate').value = todayInputDate();
@@ -3464,7 +3540,8 @@ function generateDocument() {
   jsonpRetry(url, 2, 60000).then(function(res) {
     if (!res || !res.ok) throw new Error((res && res.error) || 'Generation failed');
     var links = '<div class="contract-preview-row"><strong>DOC</strong><span><a target="_blank" href="' + escapeHtml(res.docUrl || '') + '">Open editable document</a></span></div>' +
-      '<div class="contract-preview-row"><strong>PDF</strong><span><a target="_blank" href="' + escapeHtml(res.pdfUrl || '') + '">Open PDF</a></span></div>';
+      '<div class="contract-preview-row"><strong>PDF</strong><span><a target="_blank" href="' + escapeHtml(res.pdfUrl || '') + '">Open PDF</a></span></div>' +
+      '<div class="contract-preview-row"><strong>Folder</strong><span><a target="_blank" href="' + escapeHtml(res.folderUrl || '') + '">Open tenant folder</a></span></div>';
     document.getElementById('docPreview').innerHTML = '<strong>Generated successfully.</strong>' + links;
     toast('Document generated', 'success');
   }).catch(function(e) {
@@ -3799,6 +3876,8 @@ function render() {
         '<div class="quick-btns">' +
           '<button class="icon-btn" data-edit="' + t.apt + '" title="Edit">✏️</button>' +
           '<button class="icon-btn" data-doc="' + t.apt + '" title="Contract docs">📄</button>' +
+          '<button class="icon-btn" data-folder="' + t.apt + '" title="Open tenant folder">📁</button>' +
+          '<button class="icon-btn" data-upload="' + t.apt + '" title="Upload passport or document">⬆</button>' +
           '<button class="icon-btn" data-remind="' + t.apt + '" title="Rent reminder">📋</button>' +
           '<button class="send-btn" data-send="' + t.apt + '" title="Send reminder">📤</button>' +
         '</div>' +
@@ -3817,6 +3896,12 @@ function render() {
     });
     div.querySelectorAll('[data-doc]').forEach(function(btn) {
       btn.addEventListener('click', function(ev) { ev.stopPropagation(); openContractWizard(this.dataset.doc); });
+    });
+    div.querySelectorAll('[data-folder]').forEach(function(btn) {
+      btn.addEventListener('click', function(ev) { ev.stopPropagation(); openTenantFolder(this.dataset.folder); });
+    });
+    div.querySelectorAll('[data-upload]').forEach(function(btn) {
+      btn.addEventListener('click', function(ev) { ev.stopPropagation(); chooseTenantFile(this.dataset.upload); });
     });
     div.querySelectorAll('[data-deposit]').forEach(function(btn) {
       btn.addEventListener('click', function(ev) {
