@@ -1829,6 +1829,7 @@ body.notification-open { overflow: hidden; touch-action: none; }
         <div class="field"><label>First payment date</label><input type="date" id="docFirstPaymentDate"></div>
         <div class="field"><label>Deposit payment date</label><input type="date" id="docDepositDate"></div>
         <div class="field"><label>Tenant address</label><input type="text" id="docTenantAddress"></div>
+        <div class="field"><label>Tenant phone (+374)</label><input type="tel" id="docPhone" placeholder="+374 91 123456" inputmode="tel" onblur="normalizeDocPhone()" onchange="updateDocPreview()"></div>
         <div class="field"><label>Tenant bank</label><input type="text" id="docTenantBank"></div>
         <div class="field"><label>Tenant bank account</label><input type="text" id="docTenantBankAccount"></div>
       </div>
@@ -1878,11 +1879,11 @@ body.notification-open { overflow: hidden; touch-action: none; }
 /* ═══════════════════════════════════════════════
    CONSTANTS & STATE
 ═══════════════════════════════════════════════ */
-var API = 'https://script.google.com/macros/s/AKfycbynaI2-iS40nJhK3hZSw6LWTJ1VpD60SkkogU_4REvINHl-jVZbC9Zt4V5t5oLYeqna/exec';
+var API = 'https://script.google.com/macros/s/AKfycbzfDz7pQXQrlGGjjHqooSzMctOZczsjm33-IV_qrBptC6dntVF_Qynq-BqxGDAYEU53/exec';
 
 /* Race fetch (no credentials) against JSONP — fastest winner used.
    fetch omits cookies so Google won't redirect the owner's account to auth. */
-function jsonp(url) {
+function jsonp(url, timeoutMs) {
   return new Promise(function(resolve, reject) {
     var settled = false;
     var pending = 2;
@@ -1892,7 +1893,7 @@ function jsonp(url) {
 
     // ── fetch branch (no credentials) ──
     var ctrl = window.AbortController ? new AbortController() : null;
-    var ft = ctrl ? setTimeout(function() { ctrl.abort(); }, 8000) : null;
+    var ft = ctrl ? setTimeout(function() { ctrl.abort(); }, timeoutMs || 8000) : null;
     fetch(url, { credentials: 'omit', mode: 'cors', signal: ctrl ? ctrl.signal : undefined })
       .then(function(r) { clearTimeout(ft); if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
       .then(win).catch(function(e) { clearTimeout(ft); fail(e); });
@@ -1900,7 +1901,7 @@ function jsonp(url) {
     // ── JSONP branch ──
     var cbName = '_cb' + Date.now() + Math.floor(Math.random() * 1e6);
     var script = document.createElement('script');
-    var jt = setTimeout(function() { cleanup(); fail(new Error('JSONP timeout')); }, 12000);
+    var jt = setTimeout(function() { cleanup(); fail(new Error('JSONP timeout')); }, timeoutMs || 12000);
     function cleanup() { clearTimeout(jt); delete window[cbName]; if (script.parentNode) script.parentNode.removeChild(script); }
     window[cbName] = function(data) { cleanup(); win(data); };
     script.onerror  = function() { cleanup(); fail(new Error('JSONP error')); };
@@ -1909,11 +1910,15 @@ function jsonp(url) {
   });
 }
 
-function jsonpRetry(url, attempts) {
+function jsonpRetry(url, attempts, timeoutMs) {
   attempts = attempts || 2;
-  return jsonp(url).catch(function(err) {
+  return jsonp(url, timeoutMs).catch(function(err) {
     if (attempts <= 1) throw err;
-    return jsonpRetry(url + (url.indexOf('?') === -1 ? '?' : '&') + '_retry=' + Date.now(), attempts - 1);
+    return jsonpRetry(
+      url + (url.indexOf('?') === -1 ? '?' : '&') + '_retry=' + Date.now(),
+      attempts - 1,
+      timeoutMs
+    );
   });
 }
 
@@ -3233,6 +3238,9 @@ function hyAmountWords(n) {
 }
 
 function openContractWizard(apt) {
+  if (!document.getElementById('docDate').value) {
+    document.getElementById('docDate').value = todayInputDate();
+  }
   populateDocTenants(apt);
   document.getElementById('docType').value = 'contract';
   changeDocType();
@@ -3261,20 +3269,26 @@ function selectedDocTenant() {
 function fillDocFromTenant() {
   var t = selectedDocTenant();
   if (!t) return;
+  var documentDate = document.getElementById('docDate').value || todayInputDate();
+  var contractStart = dateInputValue(t.startDate) || documentDate;
+  var contractEnd = dateInputValue(t.endDate) || addMonthsToInputDate(contractStart, 3);
   document.getElementById('docUnit').value = 'թիվ ' + t.apt + ' ոչ բնակելի տարածք';
-  document.getElementById('docTermStart').value = dateInputValue(t.startDate);
-  document.getElementById('docTermEnd').value = dateInputValue(t.endDate);
+  document.getElementById('docTermStart').value = contractStart;
+  document.getElementById('docTermEnd').value = contractEnd;
   document.getElementById('docRent').value = t.rent || '';
   document.getElementById('docPaymentDay').value = t.paymentDate || t.day || '';
-  document.getElementById('docFirstPaymentDate').value = dateInputValue(t.startDate);
-  document.getElementById('docDepositDate').value = dateInputValue(t.startDate);
+  document.getElementById('docFirstPaymentDate').value = contractStart;
+  document.getElementById('docDepositDate').value = contractStart;
   document.getElementById('docTenantAddress').value = t.legalAddress || t.physicalAddress || '';
+  document.getElementById('docPhone').value = formatArmenianPhone(t.phone || '');
   document.getElementById('docTenantBank').value = t.tenantBank || '';
   document.getElementById('docTenantBankAccount').value = t.tenantBankAccount || '';
-  document.getElementById('docOriginalContractDate').value = dateInputValue(t.startDate);
-  document.getElementById('docSpecialPeriodStart').value = dateInputValue(t.startDate);
-  document.getElementById('docSpecialPeriodEnd').value = dateInputValue(t.endDate);
+  document.getElementById('docOriginalContractDate').value = contractStart;
+  document.getElementById('docSpecialPeriodStart').value = addMonthsToInputDate(contractEnd, -1);
+  document.getElementById('docSpecialPeriodEnd').value = contractEnd;
   document.getElementById('docSpecialRent').value = t.rent || '';
+  document.getElementById('docSpecialDeadline').value =
+    document.getElementById('docSpecialDeadline').value || documentDate;
   updateDocPreview();
 }
 
@@ -3285,16 +3299,22 @@ function changeDocType() {
   document.getElementById('docDateLabel').textContent = isExtension ? 'Agreement date' : 'Contract date';
   document.getElementById('docGenerateBtn').textContent = isExtension ? 'Generate extension DOC + PDF' : 'Generate contract DOC + PDF';
   if (tenant) {
+    var documentDate = document.getElementById('docDate').value || todayInputDate();
+    var contractStart = dateInputValue(tenant.startDate) || documentDate;
+    var contractEnd = dateInputValue(tenant.endDate) || addMonthsToInputDate(contractStart, 3);
     if (isExtension) {
-      var currentEnd = dateInputValue(tenant.endDate);
-      document.getElementById('docOriginalContractDate').value = dateInputValue(tenant.startDate);
-      document.getElementById('docTermStart').value = currentEnd;
-      document.getElementById('docTermEnd').value = addMonthsToInputDate(currentEnd, 1);
-      document.getElementById('docSpecialPeriodStart').value = addMonthsToInputDate(currentEnd, -1);
-      document.getElementById('docSpecialPeriodEnd').value = currentEnd;
+      document.getElementById('docOriginalContractDate').value = contractStart;
+      document.getElementById('docTermStart').value = contractEnd;
+      document.getElementById('docTermEnd').value = addMonthsToInputDate(contractEnd, 1);
+      document.getElementById('docSpecialPeriodStart').value = addMonthsToInputDate(contractEnd, -1);
+      document.getElementById('docSpecialPeriodEnd').value = contractEnd;
+      document.getElementById('docSpecialDeadline').value =
+        document.getElementById('docSpecialDeadline').value || documentDate;
     } else {
-      document.getElementById('docTermStart').value = dateInputValue(tenant.startDate);
-      document.getElementById('docTermEnd').value = dateInputValue(tenant.endDate);
+      document.getElementById('docTermStart').value = contractStart;
+      document.getElementById('docTermEnd').value = contractEnd;
+      document.getElementById('docFirstPaymentDate').value = contractStart;
+      document.getElementById('docDepositDate').value = contractStart;
     }
   }
   updateDocDatePreview();
@@ -3309,6 +3329,27 @@ function addMonthsToInputDate(value, months) {
   return date.getFullYear() + '-' +
     String(date.getMonth() + 1).padStart(2, '0') + '-' +
     String(date.getDate()).padStart(2, '0');
+}
+
+function todayInputDate() {
+  var now = new Date();
+  return now.getFullYear() + '-' +
+    String(now.getMonth() + 1).padStart(2, '0') + '-' +
+    String(now.getDate()).padStart(2, '0');
+}
+
+function formatArmenianPhone(value) {
+  var digits = String(value || '').replace(/\D/g, '');
+  if (digits.length === 9 && digits.charAt(0) === '0') digits = digits.slice(1);
+  if (digits.length === 11 && digits.indexOf('374') === 0) digits = digits.slice(3);
+  if (digits.length !== 8) return String(value || '').trim();
+  return '+374 ' + digits.slice(0, 2) + ' ' + digits.slice(2);
+}
+
+function normalizeDocPhone() {
+  var input = document.getElementById('docPhone');
+  input.value = formatArmenianPhone(input.value);
+  updateDocPreview();
 }
 
 function updateDocDatePreview() {
@@ -3334,7 +3375,7 @@ function docPayload() {
     tenantName: t ? tenantDisplayName(t) : '',
     entityType: t ? (t.entityType || '') : '',
     hvhh: t ? (t.hvhh || '') : '',
-    phone: t ? (t.phone || '') : '',
+    phone: formatArmenianPhone(document.getElementById('docPhone').value),
     legalAddress: t ? (t.legalAddress || t.physicalAddress || '') : '',
     passport: t ? (t.physicalPassport || t.ceoPassport || '') : '',
     representativeName: t ? (t.ceoName || '') : '',
@@ -3374,6 +3415,7 @@ function validateDocPayload(p) {
   if (!p.termEnd) missing.push('term end');
   if (!p.monthlyRent) missing.push('monthly rent');
   if (!p.unitDescription) missing.push('unit');
+  if (!p.phone) missing.push('phone');
   if (p.type === 'contract' && !p.paymentDay) missing.push('payment day');
   if (p.type === 'contract' && !p.firstPaymentDate) missing.push('first payment date');
   if (p.type === 'contract' && !p.depositPaymentDate) missing.push('deposit payment date');
@@ -3383,7 +3425,7 @@ function validateDocPayload(p) {
   if (p.type === 'extension' && !p.specialPaymentDeadline) missing.push('special payment deadline');
   if (missing.length) return 'Missing: ' + missing.join(', ');
   if (p.hvhh && !/^\d{8}$/.test(String(p.hvhh))) return 'ՀՎՀՀ must contain exactly 8 digits.';
-  if (p.phone && !/^\+?374\s?\d{2}\s?\d{6}$/.test(String(p.phone).replace(/[-()]/g, '').trim())) return 'Phone should be in +374 format.';
+  if (!/^\+374\s\d{2}\s\d{6}$/.test(p.phone)) return 'Phone should be in +374 format, for example +374 91 123456.';
   if (Number(p.paymentDay) < 1 || Number(p.paymentDay) > 31) return 'Payment day must be 1–31.';
   return '';
 }
@@ -3416,9 +3458,10 @@ function generateDocument() {
   var btn = document.getElementById('docGenerateBtn');
   btn.disabled = true; btn.textContent = 'Generating...';
   var action = p.type === 'extension' ? 'generateExtension' : 'generateContract';
-  var url = API + '?action=' + action;
+  var requestId = action + '-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+  var url = API + '?action=' + action + '&requestId=' + encodeURIComponent(requestId);
   Object.keys(p).forEach(function(k) { url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(p[k] || ''); });
-  jsonpRetry(url, 2).then(function(res) {
+  jsonpRetry(url, 2, 60000).then(function(res) {
     if (!res || !res.ok) throw new Error((res && res.error) || 'Generation failed');
     var links = '<div class="contract-preview-row"><strong>DOC</strong><span><a target="_blank" href="' + escapeHtml(res.docUrl || '') + '">Open editable document</a></span></div>' +
       '<div class="contract-preview-row"><strong>PDF</strong><span><a target="_blank" href="' + escapeHtml(res.pdfUrl || '') + '">Open PDF</a></span></div>';
@@ -3428,7 +3471,7 @@ function generateDocument() {
     toast((e && e.message) || 'Generation failed', 'error');
   }).finally(function() {
     btn.disabled = false;
-    changeDocType();
+    btn.textContent = p.type === 'extension' ? 'Generate extension DOC + PDF' : 'Generate contract DOC + PDF';
   });
 }
 
