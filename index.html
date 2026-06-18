@@ -2333,7 +2333,7 @@ body.notification-open { overflow: hidden; touch-action: none; }
 /* ═══════════════════════════════════════════════
    CONSTANTS & STATE
 ═══════════════════════════════════════════════ */
-var API = 'https://script.google.com/macros/s/AKfycbxSxRomo093qb1oygHdIBGcK8ALKi-aIak1qROGdODlohBmfJp3fim-0mUElGBxmzIq/exec';
+var API = 'https://script.google.com/macros/s/AKfycbxASPc9uN7bdoBjUuNZeAzZf50Avu3gE3AF-Thkift3Lgjpt1u3vdTb1gJn5JbSPFs-/exec';
 var uploadTenantApt = '';
 
 /* Race fetch (no credentials) against JSONP — fastest winner used.
@@ -4027,8 +4027,21 @@ function docPayload() {
     hvhh: t ? (t.hvhh || '') : '',
     phone: formatArmenianPhone(document.getElementById('docPhone').value),
     legalAddress: t ? (t.legalAddress || t.physicalAddress || '') : '',
-    passport: t ? (t.physicalPassport || t.ceoPassport || '') : '',
-    representativeName: t ? (t.ceoName || '') : '',
+    // Physical person fields
+    passport:           t ? (t.physicalPassport || t.ceoPassport || '') : '',
+    physicalPassport:   t ? (t.physicalPassport   || '') : '',
+    physicalIssuedFrom: t ? (t.physicalIssuedFrom || '') : '',
+    physicalValidUntil: t ? (String(t.physicalValidUntil || '')) : '',
+    physicalAddress:    t ? (t.physicalAddress    || '') : '',
+    // Legal entity fields
+    registrationNumber: t ? (t.registrationNumber || '') : '',
+    // CEO / representative
+    representativeName: t ? (t.ceoName    || '') : '',
+    ceoName:            t ? (t.ceoName    || '') : '',
+    ceoPassport:        t ? (t.ceoPassport || '') : '',
+    ceoAddress:         t ? (t.ceoAddress  || '') : '',
+    ceoIssuedFrom:      t ? (t.ceoIssuedFrom  || '') : '',
+    ceoValidUntil:      t ? (String(t.ceoValidUntil || '')) : '',
     documentDate: document.getElementById('docDate').value,
     city: document.getElementById('docCity').value.trim(),
     propertyAddress: document.getElementById('docPropertyAddress').value.trim(),
