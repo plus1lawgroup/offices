@@ -1974,6 +1974,10 @@ body.notification-open { overflow: hidden; touch-action: none; }
   .rpt-search-sort { flex-direction: column; }
   .rpt-search   { width: 100%; }
 }
+
+/* Contract wizard identity section */
+.contract-grid .field-wide { grid-column: 1 / -1; }
+#docIdentitySection .contract-grid { margin-top: 8px; }
 </style>
 </head>
 <body>
@@ -2247,6 +2251,33 @@ body.notification-open { overflow: hidden; touch-action: none; }
       </div>
       <div class="contract-date-preview" id="docDatePreview">Choose the document date</div>
       <div class="contract-warning" id="docDateWarning" style="display:none"></div>
+    </div>
+
+    <div class="contract-section" id="docIdentitySection">
+      <div class="contract-section-title">Tenant identity</div>
+
+      <!-- Physical person -->
+      <div id="docPhysicalBlock">
+        <div class="contract-grid">
+          <div class="field"><label>Passport number</label><input type="text" id="docPassport" autocomplete="off"></div>
+          <div class="field"><label>Issued from</label><input type="text" id="docIssuedFrom" autocomplete="off"></div>
+          <div class="field"><label>Valid until</label><input type="date" id="docValidUntil"></div>
+        </div>
+      </div>
+
+      <!-- Legal entity -->
+      <div id="docLegalBlock" style="display:none">
+        <div class="contract-grid">
+          <div class="field"><label>HVHH (Tax ID)</label><input type="text" id="docHvhh" autocomplete="off"></div>
+          <div class="field"><label>Registration number</label><input type="text" id="docRegistrationNumber" autocomplete="off"></div>
+          <div class="field field-wide"><label>Legal address</label><input type="text" id="docLegalAddress" autocomplete="off"></div>
+          <div class="field"><label>Director name</label><input type="text" id="docCeoName" autocomplete="off"></div>
+          <div class="field"><label>Director passport</label><input type="text" id="docCeoPassport" autocomplete="off"></div>
+          <div class="field field-wide"><label>Director address</label><input type="text" id="docCeoAddress" autocomplete="off"></div>
+          <div class="field"><label>Director passport issued from</label><input type="text" id="docCeoIssuedFrom" autocomplete="off"></div>
+          <div class="field"><label>Director passport valid until</label><input type="date" id="docCeoValidUntil"></div>
+        </div>
+      </div>
     </div>
 
     <div class="contract-section">
@@ -3933,6 +3964,24 @@ function fillDocFromTenant() {
   document.getElementById('docPhone').value = formatArmenianPhone(t.phone || '');
   document.getElementById('docTenantBank').value = t.tenantBank || '';
   document.getElementById('docTenantBankAccount').value = t.tenantBankAccount || '';
+  // Identity fields
+  var isLegal = (t.entityType === 'legal');
+  document.getElementById('docPhysicalBlock').style.display = isLegal ? 'none' : '';
+  document.getElementById('docLegalBlock').style.display   = isLegal ? '' : 'none';
+  if (!isLegal) {
+    document.getElementById('docPassport').value    = t.physicalPassport || '';
+    document.getElementById('docIssuedFrom').value  = t.physicalIssuedFrom || '';
+    document.getElementById('docValidUntil').value  = dateInputValue(t.physicalValidUntil);
+  } else {
+    document.getElementById('docHvhh').value             = t.hvhh || '';
+    document.getElementById('docRegistrationNumber').value = t.registrationNumber || '';
+    document.getElementById('docLegalAddress').value      = t.legalAddress || '';
+    document.getElementById('docCeoName').value           = t.ceoName || '';
+    document.getElementById('docCeoPassport').value       = t.ceoPassport || '';
+    document.getElementById('docCeoAddress').value        = t.ceoAddress || '';
+    document.getElementById('docCeoIssuedFrom').value     = t.ceoIssuedFrom || '';
+    document.getElementById('docCeoValidUntil').value     = dateInputValue(t.ceoValidUntil);
+  }
   document.getElementById('docOriginalContractDate').value = contractStart;
   document.getElementById('docSpecialPeriodStart').value = addMonthsToInputDate(contractEnd, -1);
   document.getElementById('docSpecialPeriodEnd').value = contractEnd;
@@ -4024,24 +4073,23 @@ function docPayload() {
     apt: t ? t.apt : '',
     tenantName: t ? tenantDisplayName(t) : '',
     entityType: t ? (t.entityType || '') : '',
-    hvhh: t ? (t.hvhh || '') : '',
+    // hvhh now read from docHvhh form field above
     phone: formatArmenianPhone(document.getElementById('docPhone').value),
     legalAddress: t ? (t.legalAddress || t.physicalAddress || '') : '',
-    // Physical person fields
-    passport:           t ? (t.physicalPassport || t.ceoPassport || '') : '',
-    physicalPassport:   t ? (t.physicalPassport   || '') : '',
-    physicalIssuedFrom: t ? (t.physicalIssuedFrom || '') : '',
-    physicalValidUntil: t ? (String(t.physicalValidUntil || '')) : '',
-    physicalAddress:    t ? (t.physicalAddress    || '') : '',
-    // Legal entity fields
-    registrationNumber: t ? (t.registrationNumber || '') : '',
-    // CEO / representative
-    representativeName: t ? (t.ceoName    || '') : '',
-    ceoName:            t ? (t.ceoName    || '') : '',
-    ceoPassport:        t ? (t.ceoPassport || '') : '',
-    ceoAddress:         t ? (t.ceoAddress  || '') : '',
-    ceoIssuedFrom:      t ? (t.ceoIssuedFrom  || '') : '',
-    ceoValidUntil:      t ? (String(t.ceoValidUntil || '')) : '',
+    // Identity — read from visible form fields so user edits are captured
+    physicalPassport:   (document.getElementById('docPassport')          ||{}).value || '',
+    physicalIssuedFrom: (document.getElementById('docIssuedFrom')        ||{}).value || '',
+    physicalValidUntil: (document.getElementById('docValidUntil')        ||{}).value || '',
+    passport:           (document.getElementById('docPassport')          ||{}).value || '',
+    hvhh:               (document.getElementById('docHvhh')              ||{}).value || (t ? (t.hvhh || '') : ''),
+    registrationNumber: (document.getElementById('docRegistrationNumber')||{}).value || '',
+    legalAddress:       (document.getElementById('docLegalAddress')      ||{}).value || '',
+    representativeName: (document.getElementById('docCeoName')           ||{}).value || '',
+    ceoName:            (document.getElementById('docCeoName')           ||{}).value || '',
+    ceoPassport:        (document.getElementById('docCeoPassport')       ||{}).value || '',
+    ceoAddress:         (document.getElementById('docCeoAddress')        ||{}).value || '',
+    ceoIssuedFrom:      (document.getElementById('docCeoIssuedFrom')     ||{}).value || '',
+    ceoValidUntil:      (document.getElementById('docCeoValidUntil')     ||{}).value || '',
     documentDate: document.getElementById('docDate').value,
     city: document.getElementById('docCity').value.trim(),
     propertyAddress: document.getElementById('docPropertyAddress').value.trim(),
