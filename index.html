@@ -139,6 +139,16 @@
   --shadow:  var(--sh-md);
   --shadow-lg: var(--sh-lg);
   --sticky-h: 120px;
+
+  /* Motion — fast, functional, restrained (daily-use tool).
+     Easing reuses the strong curve already used by this file's
+     sheet/progress animations, applied consistently everywhere. */
+  --motion-snap:     120ms;
+  --motion-standard: 180ms;
+  --motion-enter:    240ms;
+  --ease-standard: cubic-bezier(.2, .8, .3, 1);
+  --ease-enter:    cubic-bezier(.16, 1, .3, 1);
+  --ease-exit:     cubic-bezier(.7, 0, .84, 0);
 }
 
 /* ── Reset ── */
@@ -1558,6 +1568,71 @@ body.notification-open { overflow: hidden; touch-action: none; }
   .icon-btn, .send-btn { width: 40px; border-radius: 11px; }
   .msg-sheet { padding: 16px; border-radius: 20px; }
 }
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   MOTION CONSISTENCY LAYER  (added for UX polish)
+   The app already has good :active press feedback. This layer's
+   job is feel, not new motion: replace the weak default `ease`
+   and seven scattered durations with one strong custom curve and
+   the token scale. Same properties as before — only the timing
+   function and duration change. Honours the reduced-motion block.
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/* Replaces `transition: all` (wasteful) with explicit properties. */
+.chip {
+  transition:
+    background var(--motion-standard) var(--ease-standard),
+    border-color var(--motion-standard) var(--ease-standard),
+    color var(--motion-standard) var(--ease-standard),
+    transform var(--motion-snap) var(--ease-standard);
+}
+.export-btn {
+  transition:
+    background var(--motion-standard) var(--ease-standard),
+    border-color var(--motion-standard) var(--ease-standard),
+    color var(--motion-standard) var(--ease-standard),
+    box-shadow var(--motion-standard) var(--ease-standard),
+    transform var(--motion-snap) var(--ease-standard);
+}
+
+/* Strong, consistent easing for the high-traffic interactive
+   surfaces (previously default `ease`). Property lists preserved. */
+.header-add-btn {
+  transition:
+    background var(--motion-standard) var(--ease-standard),
+    border-color var(--motion-standard) var(--ease-standard),
+    transform var(--motion-snap) var(--ease-standard);
+}
+.stat-card {
+  transition: transform var(--motion-snap) var(--ease-standard);
+}
+.card {
+  transition:
+    transform var(--motion-standard) var(--ease-standard),
+    box-shadow var(--motion-standard) var(--ease-standard),
+    border-color var(--motion-standard) var(--ease-standard),
+    opacity var(--motion-enter) var(--ease-standard);
+}
+.action-btn {
+  transition:
+    transform var(--motion-snap) var(--ease-standard),
+    box-shadow var(--motion-snap) var(--ease-standard),
+    background var(--motion-standard) var(--ease-standard),
+    border-color var(--motion-standard) var(--ease-standard);
+}
+.icon-btn {
+  transition:
+    transform var(--motion-snap) var(--ease-standard),
+    box-shadow var(--motion-snap) var(--ease-standard),
+    background var(--motion-snap) var(--ease-standard);
+}
+.send-btn {
+  transition:
+    transform var(--motion-snap) var(--ease-standard),
+    box-shadow var(--motion-snap) var(--ease-standard);
+}
+
+/* Accessibility — neutralise all motion when the user opts out.
+   Placed last so its duration override wins the cascade. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: .01ms !important;
@@ -1565,6 +1640,8 @@ body.notification-open { overflow: hidden; touch-action: none; }
     transition-duration: .01ms !important;
   }
 }
+
+
 </style>
 </head>
 <body>
