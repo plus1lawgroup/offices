@@ -1763,7 +1763,10 @@ body.notification-open { overflow: hidden; touch-action: none; }
 }
 
 /* Financial report hidden — nav lives in sidebar */
-#reportToggle, #reportBody { display: none !important; }
+/* reportToggle button replaced by sidebar nav item */
+#reportToggle { display: none !important; }
+/* reportBody hidden by default; shown via switchMainTab */
+#reportBody   { display: none; }
 
 /* ━━ Sidebar ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .sidebar {
@@ -1878,6 +1881,10 @@ body.notification-open { overflow: hidden; touch-action: none; }
       <span class="sidebar-icon">👥</span><span>Tenants</span>
     </button>
   </nav>
+    <button class="sidebar-item" data-maintab="reports" onclick="switchMainTab('reports')" role="tab" aria-selected="false">
+      <span class="sidebar-icon">📊</span><span>Reports</span>
+    </button>
+  </div><!-- /sidebar-nav -->
   <div class="sidebar-footer" id="sidebarSync"></div>
 </aside>
 <div class="main-area" id="mainArea">
@@ -4955,20 +4962,35 @@ function switchMainTab(tab) {
     tenantsPane.style.display = 'none';
     mainWrap.style.display    = '';
     hideMeterPanel();
+    document.getElementById('reportBody').style.display = 'none';
     render();
   } else if (tab === 'utilities') {
     rentZone.style.display    = 'none';
     tenantsZone.style.display = 'none';
     tenantsPane.style.display = 'none';
     mainWrap.style.display    = '';
+    document.getElementById('reportBody').style.display = 'none';
     renderMeterPanel();
   } else if (tab === 'tenants') {
     rentZone.style.display    = 'none';
     tenantsZone.style.display = '';
     tenantsPane.style.display = '';
     mainWrap.style.display    = 'none';
+    document.getElementById('reportBody').style.display = 'none';
     if (mainTab !== 'utilities') hideMeterPanel();
     renderTenantsList();
+  } else if (tab === 'reports') {
+    rentZone.style.display    = 'none';
+    tenantsZone.style.display = 'none';
+    tenantsPane.style.display = 'none';
+    mainWrap.style.display    = '';
+    hideMeterPanel();
+    document.getElementById('statsGrid').style.display = 'none';
+    document.getElementById('list').style.display      = 'none';
+    var sb = mainWrap.querySelector('.sort-bar'); if (sb) sb.style.display = 'none';
+    document.getElementById('reportBody').style.display = '';
+    reportOpen = true;
+    renderReportBody();
   }
 }
 
