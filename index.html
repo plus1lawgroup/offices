@@ -1529,6 +1529,12 @@ body.notification-open { overflow: hidden; touch-action: none; }
   .sort-bar         { grid-column: 1 / 7; min-width: 0; }
   .report-toggle    { grid-column: 7 / -1; min-width: 0; }
   .report-body      { grid-column: 7 / -1; min-width: 0; }
+  .wrap.reports-mode {
+    display: block;
+  }
+  .wrap.reports-mode .report-body {
+    grid-column: auto;
+  }
   #meterPanel       { grid-column: 1 / -1; }
   #list {
     grid-column: 1 / -1;
@@ -2210,6 +2216,13 @@ body {
   padding-left: clamp(18px, 2.6vw, 32px);
   padding-right: clamp(18px, 2.6vw, 32px);
 }
+#reportBody {
+  width: min(860px, calc(100% - 64px));
+  max-width: 860px;
+  margin: 24px auto 0;
+  padding-left: 0;
+  padding-right: 0;
+}
 .month-row,
 .search-wrap input,
 .sort-bar,
@@ -2268,6 +2281,11 @@ body {
   #reportBody {
     padding-left: max(14px, env(safe-area-inset-left));
     padding-right: max(14px, env(safe-area-inset-right));
+  }
+  #reportBody {
+    width: 100%;
+    max-width: none;
+    margin-top: 14px;
   }
 }
 </style>
@@ -5543,6 +5561,7 @@ function switchMainTab(tab) {
   var tenantsZone = document.getElementById('tenantsStickyZone');
   var tenantsPane = document.getElementById('tenantsPanel');
   var mainWrap    = document.getElementById('mainWrap');
+  if (mainWrap) mainWrap.classList.toggle('reports-mode', tab === 'reports');
   if (tab === 'rent') {
     rentZone.style.display    = '';
     tenantsZone.style.display = 'none';
