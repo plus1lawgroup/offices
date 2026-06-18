@@ -2217,11 +2217,45 @@ body {
   padding-right: clamp(18px, 2.6vw, 32px);
 }
 #reportBody {
-  width: min(860px, calc(100% - 64px));
-  max-width: 860px;
+  width: min(1320px, calc(100% - 32px));
+  max-width: 1320px;
   margin: 24px auto 0;
   padding-left: 0;
   padding-right: 0;
+}
+#rptTableWrap {
+  overflow-x: auto;
+}
+.rpt-table {
+  min-width: 100%;
+}
+@media (min-width: 900px) {
+  #rptTableWrap {
+    overflow-x: hidden;
+  }
+  .rpt-table {
+    table-layout: fixed;
+  }
+  .rpt-table th,
+  .rpt-table td {
+    padding-left: 9px;
+    padding-right: 9px;
+  }
+  .rpt-table th:nth-child(1), .rpt-table td:nth-child(1) { width: 8%; }
+  .rpt-table th:nth-child(2), .rpt-table td:nth-child(2) { width: 25%; }
+  .rpt-table th:nth-child(3), .rpt-table td:nth-child(3) { width: 10%; }
+  .rpt-table th:nth-child(4), .rpt-table td:nth-child(4) { width: 10%; }
+  .rpt-table th:nth-child(5), .rpt-table td:nth-child(5) { width: 11%; }
+  .rpt-table th:nth-child(6), .rpt-table td:nth-child(6) { width: 9%; }
+  .rpt-table th:nth-child(7), .rpt-table td:nth-child(7) { width: 10%; }
+  .rpt-table th:nth-child(8), .rpt-table td:nth-child(8) { width: 11%; }
+  .rpt-table th:nth-child(9), .rpt-table td:nth-child(9) { width: 9%; }
+  .rpt-table th:nth-child(10), .rpt-table td:nth-child(10) { width: 10%; }
+  .rpt-tname {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 .month-row,
 .search-wrap input,
