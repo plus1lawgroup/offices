@@ -1858,6 +1858,122 @@ body.notification-open { overflow: hidden; touch-action: none; }
     height: calc(100vh - 64px);
   }
 }
+
+/* ━━ Reports / CRM Tab ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+#reportBody {
+  padding: var(--page-gutter);
+  max-width: var(--page-max);
+  margin: 0 auto; width: 100%;
+  font-size: 14px;
+}
+/* KPI summary row */
+.rpt-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px; margin-bottom: 18px;
+}
+.rpt-kpi {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px 14px;
+  box-shadow: var(--sh-xs);
+}
+.rpt-kpi-val   { font-size: 20px; font-weight: 900; letter-spacing:-.03em; color: var(--ink); line-height:1.1; }
+.rpt-kpi-label { font-size: 10px; font-weight: 800; letter-spacing:.05em; text-transform:uppercase; color: var(--ink-4); margin-top:5px; }
+.rpt-kpi-sub   { font-size: 11px; color: var(--ink-3); margin-top:2px; }
+.rpt-kpi-green .rpt-kpi-val { color: var(--paid); }
+.rpt-kpi-red   .rpt-kpi-val { color: var(--red); }
+.rpt-kpi-amber .rpt-kpi-val { color: var(--amber); }
+/* Controls bar */
+.rpt-controls {
+  display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 12px 14px; margin-bottom: 14px;
+}
+.rpt-filter-bar { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; }
+.rpt-pill {
+  padding: 5px 13px; border-radius: 999px;
+  border: 1.5px solid var(--border); background: var(--surface-2);
+  font-size: 12px; font-weight: 700; color: var(--ink-2); cursor: pointer;
+  transition: all var(--motion-snap) var(--ease-standard);
+}
+.rpt-pill.active { background: var(--forest); border-color: var(--forest); color:#fff; }
+.rpt-pill:active { transform: scale(.96); }
+.rpt-search-sort { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+.rpt-search {
+  padding: 8px 12px; border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm); font-size: 13px;
+  background: var(--surface-2); color: var(--ink);
+  outline: none; width: 210px;
+}
+.rpt-search:focus { border-color: var(--sage); }
+.rpt-sort-sel {
+  padding: 8px 10px; border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm); font-size: 13px; font-family: inherit;
+  background: var(--surface-2); color: var(--ink); cursor: pointer; outline: none;
+}
+/* Table wrapper */
+#rptTableWrap { overflow-x: auto; border-radius: var(--radius); margin-bottom: 14px; }
+.rpt-table {
+  width: 100%; border-collapse: collapse;
+  background: var(--surface); border: 1px solid var(--border);
+  font-size: 13px; min-width: 820px;
+}
+.rpt-table thead { position: sticky; top: 0; z-index: 2; }
+.rpt-table th {
+  padding: 10px 12px; text-align: left;
+  font-size: 10px; font-weight: 900; letter-spacing:.05em; text-transform: uppercase;
+  color: var(--ink-3); background: var(--surface-2);
+  border-bottom: 2px solid var(--border); white-space: nowrap;
+}
+.rpt-sortable { cursor: pointer; user-select: none; }
+.rpt-sortable:hover { color: var(--ink); }
+.rpt-th-active { color: var(--forest); }
+.rpt-table td {
+  padding: 10px 12px; border-bottom: 1px solid var(--surface-3);
+  vertical-align: middle; white-space: nowrap;
+}
+.rpt-table tbody tr:hover { background: rgba(20,184,166,.04); }
+.rpt-num    { text-align: right; font-variant-numeric: tabular-nums; }
+.rpt-strong { font-weight: 800; }
+.rpt-apt    { font-weight: 900; font-size: 15px; letter-spacing:-.02em; }
+.rpt-tname  { font-weight: 700; }
+.rpt-entity {
+  display: inline-block; font-size: 9px; font-weight: 800;
+  letter-spacing:.04em; text-transform: uppercase;
+  padding: 1px 6px; border-radius: 999px; margin-top: 2px;
+}
+.rpt-entity-legal { background: var(--prepaid-l); color: var(--prepaid); }
+.rpt-entity-phys  { background: var(--blue-l);    color: var(--blue); }
+/* Status badges */
+.rpt-badge {
+  display: inline-block; padding: 3px 8px; border-radius: 999px;
+  font-size: 10px; font-weight: 800; letter-spacing:.03em;
+}
+.rpt-paid    { background: var(--paid-bg);   color: var(--paid); }
+.rpt-unpaid  { background: var(--unpaid-l);  color: var(--unpaid); }
+.rpt-deposit { background: var(--deposit-l); color: var(--deposit); }
+.rpt-prepaid { background: var(--prepaid-l); color: var(--prepaid); }
+.rpt-partial { background: var(--amber-l);   color: var(--amber); }
+/* Footer */
+.rpt-table tfoot td {
+  padding: 10px 12px; background: var(--surface-3);
+  border-top: 2px solid var(--border);
+}
+.rpt-foot-lbl {
+  font-size: 11px; font-weight: 800; color: var(--ink-3);
+  text-transform: uppercase; letter-spacing:.04em;
+}
+/* Actions */
+.rpt-actions { display: flex; gap: 8px; padding-bottom: 24px; }
+/* Empty state */
+.rpt-empty { text-align:center; padding: 40px; color: var(--ink-3); }
+/* Mobile */
+@media (max-width: 768px) {
+  .rpt-kpi-row  { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .rpt-controls { flex-direction: column; align-items: stretch; }
+  .rpt-search-sort { flex-direction: column; }
+  .rpt-search   { width: 100%; }
+}
 </style>
 </head>
 <body>
@@ -2316,7 +2432,11 @@ var lastSyncTime = null;
 var syncInFlight = false;
 var lastSyncError = '';
 var hasInitialData = false;
-var reportOpen = false;
+var reportOpen   = false;
+var reportFilter = 'all';
+var reportSort   = 'apt';
+var reportSortDir = 1;
+var reportSearch = '';
 var longPressTimer = null;
 var showPaid = false;  // hide fully-paid cards by default
 var meterShowPaid = false;      // electricity tab: hide paid offices by default
@@ -2847,36 +2967,151 @@ function toggleReport() {
   reportOpen = !reportOpen;
   document.getElementById('reportBody').classList.toggle('open', reportOpen);
   document.getElementById('reportArrow').textContent = reportOpen ? '▴' : '▾';
-  if (reportOpen) renderReportBody();
+  if (reportOpen && mainTab === 'reports') renderReportBody();
 }
 
 function renderReportBody() {
-  var f = calcFinancials();
+  if (mainTab !== 'reports') return;
+  var f   = calcFinancials();
   var body = document.getElementById('reportBody');
-  function row(label, val, cls) {
-    return '<div class="report-row"><span class="report-row-label">' + label + '</span>' +
-           '<span class="report-row-val ' + (cls||'') + '">' + val + '</span></div>';
+  var totalDue  = f.rentTotal + f.elecTotal + f.netTotal;
+  var totalPaid = f.rentCollected + f.elecCollected + f.netCollected;
+  var outstanding = totalDue - totalPaid;
+  var rate = totalDue > 0 ? Math.round(totalPaid / totalDue * 100) : 0;
+  function kpi(val, label, sub, cls) {
+    return '<div class="rpt-kpi ' + (cls||'') + '">' +
+      '<div class="rpt-kpi-val">' + val + '</div>' +
+      '<div class="rpt-kpi-label">' + label + '</div>' +
+      (sub ? '<div class="rpt-kpi-sub">' + sub + '</div>' : '') +
+      '</div>';
   }
-  body.innerHTML =
-    '<div class="report-section">Payments</div>' +
-    row('🏢 Rent collected', fmt(f.rentCollected) + ' ֏', 'c-green') +
-    row('🏢 Rent remaining', fmt(f.rentTotal - f.rentCollected) + ' ֏', 'c-red') +
-    row('⚡ Electricity collected', fmt(f.elecCollected) + ' ֏', 'c-green') +
-    row('⚡ Electricity remaining', fmt(f.elecTotal - f.elecCollected) + ' ֏', 'c-red') +
-    row('📶 Internet collected', fmt(f.netCollected) + ' ֏', 'c-green') +
-    row('📶 Internet remaining', fmt(f.netTotal - f.netCollected) + ' ֏', 'c-red') +
-    '<div class="report-section">Summary</div>' +
-    row('💰 Total collected', fmt(f.totalCollected) + ' ֏', 'c-green') +
-    row('💰 Total remaining', fmt(f.totalDue - f.totalCollected) + ' ֏', 'c-red') +
-    row('⟳ Deposit ({0})'.replace('{0}', f.depCount), fmt(f.depAmt) + ' ֏', 'c-amber') +
-    '<div class="report-section">Top unpaid</div>' +
-    f.unpaidList.slice(0, 5).map(function(t) {
-      return row('Office ' + t.apt + ' · ' + t.name, fmt(t.rent) + ' ֏', 'c-red');
-    }).join('') +
-    '<div class="export-row">' +
-      '<button class="export-btn primary" onclick="exportCSV()">📥 CSV</button>' +
-      '<button class="export-btn" onclick="shareReport()">📤 Share</button>' +
-    '</div>';
+  var kpiRow = '<div class="rpt-kpi-row">' +
+    kpi(fmt(totalDue) + ' \u058f',    'Total Due',          curMonth, '') +
+    kpi(fmt(totalPaid) + ' \u058f',   'Collected',          tenants.length + ' offices', 'rpt-kpi-green') +
+    kpi(fmt(outstanding) + ' \u058f', 'Outstanding',        f.unpaidList.length + ' unpaid', outstanding > 0 ? 'rpt-kpi-red' : 'rpt-kpi-green') +
+    kpi(rate + '%',                   'Collection Rate',    '', rate >= 80 ? 'rpt-kpi-green' : rate >= 50 ? 'rpt-kpi-amber' : 'rpt-kpi-red') +
+    kpi(fmt(f.rentCollected) + ' \u058f', 'Rent Collected',  'of ' + fmt(f.rentTotal) + ' \u058f', '') +
+    kpi(fmt(f.elecCollected + f.netCollected) + ' \u058f', 'Utilities Collected', 'of ' + fmt(f.elecTotal + f.netTotal) + ' \u058f', '') +
+  '</div>';
+  var filterLabels = { all:'All', paid:'\u2705 Paid', unpaid:'\u23f3 Unpaid', deposit:'\u27f3 Deposit', prepaid:'\u2191 Prepaid' };
+  var controls = '<div class="rpt-controls">' +
+    '<div class="rpt-filter-bar">' +
+      Object.keys(filterLabels).map(function(k) {
+        return '<button class="rpt-pill' + (reportFilter === k ? ' active' : '') + '" onclick="setReportFilter(\'' + k + '\')">' + filterLabels[k] + '</button>';
+      }).join('') +
+    '</div>' +
+    '<div class="rpt-search-sort">' +
+      '<input class="rpt-search" id="rptSearch" type="text" placeholder="\ud83d\udd0d Office, name, phone\u2026" oninput="reportSearch=this.value;renderReportTable()" value="' + escapeHtml(reportSearch) + '">' +
+      '<select class="rpt-sort-sel" onchange="setReportSort(this.value)">' +
+        '<option value="apt"'    + (reportSort==='apt'   ?' selected':'') + '>Sort: Office</option>' +
+        '<option value="name"'   + (reportSort==='name'  ?' selected':'') + '>Sort: Name</option>' +
+        '<option value="rent"'   + (reportSort==='rent'  ?' selected':'') + '>Sort: Rent</option>' +
+        '<option value="due"'    + (reportSort==='due'   ?' selected':'') + '>Sort: Total Due</option>' +
+        '<option value="status"' + (reportSort==='status'?' selected':'') + '>Sort: Status</option>' +
+      '</select>' +
+    '</div>' +
+  '</div>';
+  var actions = '<div class="rpt-actions">' +
+    '<button class="export-btn primary" onclick="exportCSV()">\ud83d\udce5 Export CSV</button>' +
+    '<button class="export-btn" onclick="shareReport()">\ud83d\udce4 Share</button>' +
+  '</div>';
+  body.innerHTML = kpiRow + controls + '<div id="rptTableWrap"></div>' + actions;
+  renderReportTable();
+}
+
+function setReportFilter(f) {
+  reportFilter = f;
+  renderReportBody();
+}
+function setReportSort(col) {
+  if (reportSort === col) { reportSortDir *= -1; } else { reportSort = col; reportSortDir = 1; }
+  renderReportTable();
+}
+function rptSortArrow(col) { return reportSort === col ? (reportSortDir === 1 ? ' \u2191' : ' \u2193') : ''; }
+
+function rentBadge_(status) {
+  if (!status) return '<span class="rpt-badge rpt-unpaid">Unpaid</span>';
+  var m = { paid:'rpt-paid', deposit:'rpt-deposit', prepaid:'rpt-prepaid', partial:'rpt-partial' };
+  var l = { paid:'Paid', deposit:'Deposit', prepaid:'Prepaid', partial:'Partial' };
+  return '<span class="rpt-badge ' + (m[status]||'rpt-unpaid') + '">' + (l[status]||escapeHtml(status)) + '</span>';
+}
+function elecBadge_(status) {
+  if (!status) return '<span class="rpt-badge rpt-unpaid">Unpaid</span>';
+  if (status === 'paid') return '<span class="rpt-badge rpt-paid">Paid</span>';
+  return '<span class="rpt-badge rpt-partial">' + escapeHtml(status) + '</span>';
+}
+
+function renderReportTable() {
+  var wrap = document.getElementById('rptTableWrap');
+  if (!wrap) return;
+  var q = (reportSearch || '').trim().toLowerCase();
+  var rows = tenants.map(function(t) {
+    var s = st[t.apt] || {};
+    var e = utilityForTenant(t);
+    var elecAmt = (e.amdDay !== undefined) ? (e.amdDay + e.amdNight) : 0;
+    var netAmt  = tenantHasInternet(t, e) ? 5000 : 0;
+    var due  = t.rent + elecAmt + netAmt;
+    var paid = (isRentCovered(s.r) ? t.rent : 0) + (s.e === 'paid' ? elecAmt + netAmt : 0);
+    return { t:t, s:s, elecAmt:elecAmt, netAmt:netAmt, due:due, paid:paid, bal:due-paid };
+  });
+  if (reportFilter !== 'all') {
+    rows = rows.filter(function(r) {
+      if (reportFilter === 'unpaid') return !r.s.r || r.s.r === 'unpaid';
+      return r.s.r === reportFilter;
+    });
+  }
+  if (q) rows = rows.filter(function(r) {
+    return (officeKey(r.t.apt)+' '+tenantDisplayName(r.t)+' '+(r.t.phone||'')).toLowerCase().indexOf(q) !== -1;
+  });
+  var d = reportSortDir;
+  rows.sort(function(a, b) {
+    if (reportSort === 'name')   return tenantDisplayName(a.t).localeCompare(tenantDisplayName(b.t)) * d;
+    if (reportSort === 'rent')   return (a.t.rent - b.t.rent) * d;
+    if (reportSort === 'due')    return (a.due - b.due) * d;
+    if (reportSort === 'status') return ((a.s.r||'zzz').localeCompare(b.s.r||'zzz')) * d;
+    return officeKey(a.t.apt).localeCompare(officeKey(b.t.apt), undefined, {numeric:true}) * d;
+  });
+  if (!rows.length) { wrap.innerHTML = '<div class="rpt-empty">No tenants match your filters.</div>'; return; }
+  function th(col, label) { return '<th class="rpt-sortable' + (reportSort===col?' rpt-th-active':'') + '" onclick="setReportSort(\'' + col + '\')">' + label + rptSortArrow(col) + '</th>'; }
+  var totalRent = 0, totalDue = 0, totalPaid = 0, totalBal = 0;
+  var tbodyRows = rows.map(function(r) {
+    totalRent += r.t.rent; totalDue += r.due; totalPaid += r.paid; totalBal += r.bal;
+    var entity = r.t.entityType === 'legal' ? '<span class="rpt-entity rpt-entity-legal">Legal</span>' : '<span class="rpt-entity rpt-entity-phys">Physical</span>';
+    return '<tr>' +
+      '<td class="rpt-apt">' + escapeHtml(officeKey(r.t.apt)) + '</td>' +
+      '<td><div class="rpt-tname">' + escapeHtml(tenantDisplayName(r.t)) + '</div>' + entity + '</td>' +
+      '<td class="rpt-num">' + fmt(r.t.rent) + '</td>' +
+      '<td>' + rentBadge_(r.s.r) + '</td>' +
+      '<td class="rpt-num">' + (r.elecAmt ? fmt(r.elecAmt) : '\u2014') + '</td>' +
+      '<td>' + elecBadge_(r.s.e) + '</td>' +
+      '<td class="rpt-num">' + (r.netAmt ? fmt(r.netAmt) : '\u2014') + '</td>' +
+      '<td class="rpt-num rpt-strong">' + fmt(r.due) + '</td>' +
+      '<td class="rpt-num c-green">' + fmt(r.paid) + '</td>' +
+      '<td class="rpt-num ' + (r.bal > 0 ? 'c-red' : 'c-green') + ' rpt-strong">' + fmt(r.bal) + '</td>' +
+    '</tr>';
+  }).join('');
+  wrap.innerHTML = '<table class="rpt-table">' +
+    '<thead><tr>' +
+      th('apt','Office') + th('name','Tenant') +
+      '<th class="rpt-num">Rent</th>' +
+      th('status','Rent') +
+      '<th class="rpt-num">Electricity</th>' +
+      '<th>Elec</th>' +
+      '<th class="rpt-num">Internet</th>' +
+      th('due','Total Due') +
+      '<th class="rpt-num">Paid</th>' +
+      '<th class="rpt-num">Balance</th>' +
+    '</tr></thead>' +
+    '<tbody>' + tbodyRows + '</tbody>' +
+    '<tfoot><tr>' +
+      '<td colspan="2" class="rpt-foot-lbl">' + rows.length + ' offices</td>' +
+      '<td class="rpt-num rpt-strong">' + fmt(totalRent) + '</td>' +
+      '<td colspan="4"></td>' +
+      '<td class="rpt-num rpt-strong">' + fmt(totalDue) + '</td>' +
+      '<td class="rpt-num c-green rpt-strong">' + fmt(totalPaid) + '</td>' +
+      '<td class="rpt-num c-red rpt-strong">' + fmt(totalBal) + '</td>' +
+    '</tr></tfoot>' +
+  '</table>';
 }
 
 function exportCSV() {
@@ -4939,9 +5174,9 @@ function tenantCardHtml_(t) {
     '</div>' +
     '<div class="tnt-actions" data-apt="' + escapeHtml(officeKey(t.apt)) + '">' +
       '<button class="tnt-btn" data-act="edit">\u270F\uFE0F Edit</button>' +
-      '<button class="tnt-btn" data-act="drive">\U0001F4C1 Drive</button>' +
+      '<button class="tnt-btn" data-act="drive">📁 Drive</button>' +
       '<button class="tnt-btn" data-act="upload">\u2B06\uFE0F Upload</button>' +
-      '<button class="tnt-btn" data-act="contract">\U0001F4C4 Contract</button>' +
+      '<button class="tnt-btn" data-act="contract">📄 Contract</button>' +
     '</div>' +
   '</div>';
 }
@@ -4988,7 +5223,7 @@ function switchMainTab(tab) {
     document.getElementById('statsGrid').style.display = 'none';
     document.getElementById('list').style.display      = 'none';
     var sb = mainWrap.querySelector('.sort-bar'); if (sb) sb.style.display = 'none';
-    document.getElementById('reportBody').style.display = '';
+    document.getElementById('reportBody').style.display = 'block';
     reportOpen = true;
     renderReportBody();
   }
