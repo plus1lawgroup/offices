@@ -160,7 +160,8 @@ body {
   color: var(--ink);
   font-size: 14px;
   line-height: 1.5;
-  min-height: 100vh;
+  height: 100vh;
+  display: flex;
   overscroll-behavior-y: contain;
   -webkit-font-smoothing: antialiased;
 }
@@ -1760,10 +1761,126 @@ body.notification-open { overflow: hidden; touch-action: none; }
 #tenantsPanel .tenants-body {
   flex: unset; overflow-y: visible; min-height: 200px;
 }
+
+/* Financial report hidden — nav lives in sidebar */
+#reportToggle, #reportBody { display: none !important; }
+
+/* ━━ Sidebar ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.sidebar {
+  width: 220px; flex-shrink: 0;
+  background: linear-gradient(160deg, #07172a 0%, #091f3a 55%, #0b1d33 100%);
+  display: flex; flex-direction: column;
+  height: 100vh; overflow-y: auto;
+  border-right: 1px solid rgba(45,212,191,.10);
+}
+.sidebar-brand {
+  padding: 20px 16px 18px;
+  display: flex; align-items: center; gap: 10px;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+  flex-shrink: 0;
+}
+.sidebar-logo-mark {
+  width: 36px; height: 36px; flex-shrink: 0;
+  background: linear-gradient(135deg, #14b8a6, #0891b2);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+}
+.sidebar-brand-name { color: #fff; font-weight: 700; font-size: 14px; line-height: 1.3; }
+.sidebar-brand-sub  { color: rgba(255,255,255,.45); font-size: 11px; margin-top: 1px; }
+.sidebar-nav {
+  flex: 1; padding: 14px 8px;
+  display: flex; flex-direction: column; gap: 3px;
+}
+.sidebar-item {
+  display: flex; align-items: center; gap: 11px;
+  padding: 11px 13px; border-radius: 10px;
+  border: none; background: transparent;
+  color: rgba(255,255,255,.5);
+  font-size: 13px; font-weight: 600; font-family: inherit;
+  cursor: pointer; text-align: left; width: 100%;
+  letter-spacing: -.01em;
+  transition:
+    background var(--motion-standard) var(--ease-standard),
+    color var(--motion-standard) var(--ease-standard),
+    transform var(--motion-snap) var(--ease-standard);
+}
+.sidebar-item:hover  { background: rgba(255,255,255,.07); color: rgba(255,255,255,.85); }
+.sidebar-item.active { background: rgba(20,184,166,.18); color: #fff; font-weight: 800; }
+.sidebar-item.active .sidebar-icon { color: var(--sage); }
+.sidebar-item:active { transform: scale(.97); }
+.sidebar-icon { font-size: 17px; width: 22px; text-align: center; flex-shrink: 0; }
+.sidebar-footer {
+  padding: 14px 16px; flex-shrink: 0;
+  border-top: 1px solid rgba(255,255,255,.07);
+  font-size: 11px; color: rgba(255,255,255,.35); line-height: 1.6;
+}
+
+/* ━━ Main area ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.main-area {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column;
+  height: 100vh; overflow-y: auto; overflow-x: hidden;
+}
+#rentStickyZone, #tenantsStickyZone {
+  position: sticky; top: 0; z-index: 10;
+}
+
+/* ━━ Mobile: sidebar → bottom tab bar ━━━━━━━━━━━━━━━━━━━━━━━━━ */
+@media (max-width: 768px) {
+  body { flex-direction: column; }
+  .sidebar {
+    order: 2; width: 100%; height: auto;
+    flex-direction: row;
+    border-right: none;
+    border-top: 1px solid rgba(45,212,191,.15);
+    overflow-y: visible; overflow-x: auto;
+  }
+  .sidebar-brand, .sidebar-footer { display: none; }
+  .sidebar-nav {
+    flex-direction: row; flex: 1;
+    padding: 4px 8px;
+    padding-bottom: max(4px, env(safe-area-inset-bottom));
+    gap: 2px;
+  }
+  .sidebar-item {
+    flex: 1; flex-direction: column;
+    gap: 2px; padding: 7px 4px;
+    font-size: 10px; border-radius: 8px;
+    justify-content: center; text-align: center;
+  }
+  .sidebar-icon { font-size: 20px; width: auto; }
+  .main-area {
+    order: 1;
+    height: calc(100vh - 64px);
+  }
+}
 </style>
 </head>
 <body>
 
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <div class="sidebar-logo-mark">🏢</div>
+    <div>
+      <div class="sidebar-brand-name">Plus One</div>
+      <div class="sidebar-brand-sub">Law Group · Offices</div>
+    </div>
+  </div>
+  <nav class="sidebar-nav" role="tablist">
+    <button class="sidebar-item active" data-maintab="rent"      onclick="switchMainTab('rent')"      role="tab" aria-selected="true">
+      <span class="sidebar-icon">🏠</span><span>Rent Payments</span>
+    </button>
+    <button class="sidebar-item" data-maintab="utilities" onclick="switchMainTab('utilities')" role="tab" aria-selected="false">
+      <span class="sidebar-icon">⚡</span><span>Utilities</span>
+    </button>
+    <button class="sidebar-item" data-maintab="tenants"   onclick="switchMainTab('tenants')"   role="tab" aria-selected="false">
+      <span class="sidebar-icon">👥</span><span>Tenants</span>
+    </button>
+  </nav>
+  <div class="sidebar-footer" id="sidebarSync"></div>
+</aside>
+<div class="main-area" id="mainArea">
 <!-- Offline banner -->
 <div id="offlineBanner">📵 Offline · showing cached data</div>
 
@@ -1782,13 +1899,6 @@ body.notification-open { overflow: hidden; touch-action: none; }
     <span id="syncText">Loading...</span>
   </button>
   </div>
-</div>
-
-<!-- Top navigation tabs -->
-<div class="top-tabs" id="topTabs" role="tablist">
-  <button class="top-tab active" data-maintab="rent"      onclick="switchMainTab('rent')"      role="tab" aria-selected="true">🏠 Rent Payments</button>
-  <button class="top-tab"        data-maintab="utilities" onclick="switchMainTab('utilities')" role="tab">⚡ Utilities</button>
-  <button class="top-tab"        data-maintab="tenants"   onclick="switchMainTab('tenants')"   role="tab">👥 Tenants</button>
 </div>
 
 <!-- Sticky controls -->
@@ -2094,6 +2204,7 @@ body.notification-open { overflow: hidden; touch-action: none; }
 <div id="tenantsPanel" style="display:none">
   <div class="tenants-body" id="tenantsBody"></div>
 </div>
+</div><!-- /main-area -->
 
 <script>
 /* ═══════════════════════════════════════════════
@@ -4829,7 +4940,7 @@ function tenantCardHtml_(t) {
 }
 function switchMainTab(tab) {
   mainTab = tab;
-  document.querySelectorAll('.top-tab').forEach(function(b) {
+  document.querySelectorAll('.sidebar-item').forEach(function(b) {
     var on = b.getAttribute('data-maintab') === tab;
     b.classList.toggle('active', on);
     b.setAttribute('aria-selected', on ? 'true' : 'false');
