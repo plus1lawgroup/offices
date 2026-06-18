@@ -1642,6 +1642,124 @@ body.notification-open { overflow: hidden; touch-action: none; }
 }
 
 
+
+/* ━━ TENANTS MANAGEMENT SCREEN (Phase 2) ━━ */
+.tenants-screen {
+  position: fixed; inset: 0; z-index: 190;
+  background: var(--bg);
+  display: flex; flex-direction: column;
+  animation: fadeIn var(--motion-standard) var(--ease-enter);
+}
+.tenants-screen.hidden { display: none; }
+.tenants-topbar {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px var(--page-gutter);
+  background: linear-gradient(105deg, #08182b 0%, #0b2940 62%, #0f766e 140%);
+  color: #fff; box-shadow: var(--sh-sm);
+}
+.tenants-back {
+  width: 34px; height: 34px; flex-shrink: 0;
+  border: none; border-radius: 50%;
+  background: rgba(255,255,255,.12); color: #fff;
+  font-size: 22px; line-height: 1; cursor: pointer;
+  transition: transform var(--motion-snap) var(--ease-standard), background var(--motion-standard) var(--ease-standard);
+}
+.tenants-back:hover  { background: rgba(255,255,255,.22); }
+.tenants-back:active { transform: scale(.9); }
+.tenants-topbar-title { display: flex; flex-direction: column; line-height: 1.2; }
+.tenants-topbar-name  { font-weight: 900; letter-spacing: -.02em; font-size: 17px; }
+.tenants-topbar-sub   { font-size: 11px; opacity: .7; }
+.tenants-topbar-search { margin-left: auto; flex: 0 1 280px; }
+.tenants-topbar-search input {
+  width: 100%; padding: 9px 13px; font-size: 14px;
+  border: none; border-radius: var(--radius-sm);
+  background: rgba(255,255,255,.14); color: #fff; outline: none;
+}
+.tenants-topbar-search input::placeholder { color: rgba(255,255,255,.6); }
+.tenants-body {
+  flex: 1; overflow-y: auto; padding: var(--page-gutter);
+  display: grid; gap: 12px; align-content: start;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  max-width: var(--page-max); width: 100%; margin: 0 auto;
+}
+.tnt-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px; box-shadow: var(--sh-xs);
+  transition: transform var(--motion-standard) var(--ease-standard), box-shadow var(--motion-standard) var(--ease-standard), border-color var(--motion-standard) var(--ease-standard);
+}
+.tnt-card:hover { transform: translateY(-2px); box-shadow: var(--sh-sm); border-color: rgba(20,184,166,.3); }
+.tnt-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.tnt-office { font-size: 22px; font-weight: 900; letter-spacing: -.03em; color: var(--ink); }
+.tnt-name   { font-size: 14px; font-weight: 700; color: var(--ink); margin-top: 2px; }
+.tnt-pills  { display: flex; flex-wrap: wrap; gap: 5px; justify-content: flex-end; }
+.tnt-pill {
+  font-size: 10px; font-weight: 800; letter-spacing: .03em; text-transform: uppercase;
+  padding: 3px 8px; border-radius: 999px; white-space: nowrap;
+}
+.tnt-pill.active   { background: var(--paid-bg); color: var(--paid); }
+.tnt-pill.finished { background: var(--surface-3); color: var(--ink-3); }
+.tnt-pill.legal    { background: var(--prepaid-l); color: var(--prepaid); }
+.tnt-pill.physical { background: var(--blue-l); color: var(--blue); }
+.tnt-meta { margin-top: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; }
+.tnt-m { display: flex; flex-direction: column; }
+.tnt-k { font-size: 9px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-4); }
+.tnt-v { font-size: 13px; font-weight: 600; color: var(--ink); }
+.tnt-empty { grid-column: 1 / -1; text-align: center; color: var(--ink-3); padding: 40px 0; }
+@media (max-width: 560px) {
+  .tenants-topbar { flex-wrap: wrap; }
+  .tenants-topbar-search { flex: 1 1 100%; margin-left: 0; }
+  .tnt-meta { grid-template-columns: 1fr 1fr; }
+}
+
+/* Tenants card actions */
+.tnt-actions { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px; }
+.tnt-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  flex: 1 1 calc(50% - 4px);
+  padding: 9px 10px; font-size: 12.5px; font-weight: 800;
+  border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--surface-2); color: var(--forest); cursor: pointer;
+  transition: transform var(--motion-snap) var(--ease-standard), background var(--motion-standard) var(--ease-standard), border-color var(--motion-standard) var(--ease-standard);
+}
+.tnt-btn:hover  { border-color: var(--sage); background: rgba(20,184,166,.08); }
+.tnt-btn:active { transform: scale(.96); }
+
+/* ── Top Tab Navigation ──────────────────────────────────────── */
+.top-tabs {
+  display: flex; background: var(--surface);
+  border-bottom: 2px solid var(--border);
+  padding: 0 var(--page-gutter);
+  overflow-x: auto; scrollbar-width: none;
+  position: relative; z-index: 1;
+}
+.top-tabs::-webkit-scrollbar { display: none; }
+.top-tab {
+  flex: 1; min-width: 90px;
+  padding: 14px 10px 12px; font-size: 13px; font-weight: 700;
+  border: none; border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  background: transparent; color: var(--ink-3);
+  cursor: pointer; white-space: nowrap; letter-spacing: -.01em;
+  transition:
+    color var(--motion-standard) var(--ease-standard),
+    border-color var(--motion-standard) var(--ease-standard);
+}
+.top-tab:hover  { color: var(--ink); }
+.top-tab.active { color: var(--forest); border-bottom-color: var(--sage); font-weight: 800; }
+.top-tab:active { transform: scale(.97); }
+
+/* ── Tenants tab inline layout ──────────────────────────────── */
+.tenants-ctrl-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 0 8px;
+}
+.tenants-ctrl-count {
+  font-size: 12px; font-weight: 700; color: var(--ink-3); white-space: nowrap;
+}
+/* Override the flex-based assumptions from the old fixed-overlay era */
+#tenantsPanel .tenants-body {
+  flex: unset; overflow-y: visible; min-height: 200px;
+}
 </style>
 </head>
 <body>
@@ -1666,8 +1784,15 @@ body.notification-open { overflow: hidden; touch-action: none; }
   </div>
 </div>
 
+<!-- Top navigation tabs -->
+<div class="top-tabs" id="topTabs" role="tablist">
+  <button class="top-tab active" data-maintab="rent"      onclick="switchMainTab('rent')"      role="tab" aria-selected="true">🏠 Rent Payments</button>
+  <button class="top-tab"        data-maintab="utilities" onclick="switchMainTab('utilities')" role="tab">⚡ Utilities</button>
+  <button class="top-tab"        data-maintab="tenants"   onclick="switchMainTab('tenants')"   role="tab">👥 Tenants</button>
+</div>
+
 <!-- Sticky controls -->
-<div class="sticky-zone">
+<div class="sticky-zone" id="rentStickyZone">
   <div class="sticky-inner">
   <div class="control-row">
   <div class="month-row">
@@ -1683,7 +1808,6 @@ body.notification-open { overflow: hidden; touch-action: none; }
   <div class="filter-chips">
     <button class="chip active" data-tab="all">All</button>
     <button class="chip" data-tab="deposit">⟳ Deposit</button>
-    <button class="chip" data-tab="meter">⚡ Electricity</button>
     <button class="chip paid-toggle-chip" id="paidToggleBtn" onclick="toggleShowPaid()" style="display:none">
       <span id="paidToggleIcon"></span>
       <span id="paidToggleLabel">Show Paid</span>
@@ -1955,6 +2079,22 @@ body.notification-open { overflow: hidden; touch-action: none; }
 
 <input type="file" id="tenantFileInput" hidden>
 
+<!-- ─── TENANTS TAB: controls bar ─── -->
+<div class="sticky-zone" id="tenantsStickyZone" style="display:none">
+  <div class="sticky-inner">
+    <div class="tenants-ctrl-row">
+      <span class="tenants-ctrl-count" id="tenantsCount"></span>
+      <div class="search-wrap">
+        <input type="text" id="tenantsSearch" placeholder="🔍 Office, name, phone..." autocomplete="off" autocorrect="off">
+      </div>
+    </div>
+  </div>
+</div>
+<!-- ─── TENANTS TAB: cards panel ─── -->
+<div id="tenantsPanel" style="display:none">
+  <div class="tenants-body" id="tenantsBody"></div>
+</div>
+
 <script>
 /* ═══════════════════════════════════════════════
    CONSTANTS & STATE
@@ -2047,6 +2187,7 @@ var elecMap = {};
 var st = {};
 var paymentsData = {};
 var curTab = 'all';
+var mainTab = 'rent';
 var editingApt = null;
 var modalMode = 'edit';
 var availableMonths = [];
@@ -2919,6 +3060,7 @@ function clearRentPayment(apt, tenantName) {
 function saveTenant(apt, fields) {
   var url = API + '?action=updateTenant' +
     '&apt=' + encodeURIComponent(apt) +
+    '&tenancyId=' + encodeURIComponent(fields.tenancyId || '') +
     '&name=' + encodeURIComponent(fields.name) +
     '&phone=' + encodeURIComponent(fields.phone) +
     '&ch=' + encodeURIComponent(fields.ch) +
@@ -3198,6 +3340,8 @@ function saveEdit() {
     btn.textContent = '💾 Save'; btn.disabled = false;
     return;
   }
+  var _et = tenants.find(function(x) { return x.apt === aptValue; });
+  if (_et && _et.tenancyId) fields.tenancyId = _et.tenancyId;
   saveTenant(aptValue, fields).then(function(ok) {
     if (ok) {
       var t = tenants.find(function(x) { return x.apt === aptValue; });
@@ -3210,7 +3354,7 @@ function saveEdit() {
       }
       if (elecMap[aptValue]) elecMap[aptValue].internet = (fields.internet === 'yes');
       toast('✓ Saved', 'success');
-      closeModal(); render();
+      closeModal(); render(); refreshTenantsIfOpen();
     } else { toast('✗ Error', 'error'); }
     btn.textContent = '💾 Save'; btn.disabled = false;
   });
@@ -4618,6 +4762,125 @@ setInterval(function() { if (document.visibilityState === 'visible') refreshAll(
 setInterval(function() {
   if (lastSyncTime) document.getElementById('lastSync').textContent = timeAgo(lastSyncTime);
 }, 30000);
+
+/* ═════════════════════════════
+   TENANTS MANAGEMENT (Phase 2: read-only listing)
+   Renders from the in-memory `tenants` array (active tenants,
+   each carrying tenancyId + status from the backend). Archived
+   history + edit/turnover come in later phases.
+══════════════════════════════ */
+function openTenants()  { switchMainTab('tenants'); }
+function closeTenants() { switchMainTab('rent'); }
+function refreshTenantsIfOpen() {
+  if (mainTab === 'tenants') renderTenantsList();
+}
+function tenantsSorted_() {
+  return tenants.slice().sort(function(a, b) {
+    return officeKey(a.apt).localeCompare(officeKey(b.apt), undefined, { numeric: true });
+  });
+}
+function renderTenantsList() {
+  var q = (document.getElementById('tenantsSearch').value || '').trim().toLowerCase();
+  var list = tenantsSorted_().filter(function(t) {
+    if (!q) return true;
+    var hay = (officeKey(t.apt) + ' ' + tenantDisplayName(t) + ' ' + (t.phone || '')).toLowerCase();
+    return hay.indexOf(q) !== -1;
+  });
+  document.getElementById('tenantsCount').textContent =
+    list.length + (list.length === 1 ? ' office' : ' offices');
+  var body = document.getElementById('tenantsBody');
+  body.innerHTML = list.length
+    ? list.map(tenantCardHtml_).join('')
+    : '<div class="tnt-empty">No tenants match your search.</div>';
+}
+function tenantCardHtml_(t) {
+  var name   = tenantDisplayName(t) || '—';
+  var entity = (t.entityType === 'legal') ? 'legal' : 'physical';
+  var status = (t.status === 'finished') ? 'finished' : 'active';
+  var rent   = t.rent ? (fmt(t.rent) + ' ֏') : '—';
+  var day    = t.day ? ('Day ' + t.day) : '—';
+  var phone  = t.phone || '—';
+  var net    = t.internet ? 'Yes' : 'No';
+  var start  = t.startMonth || (t.startDate ? String(t.startDate).slice(0, 10) : '—');
+  function m(k, v) {
+    return '<div class="tnt-m"><span class="tnt-k">' + k + '</span><span class="tnt-v">' + escapeHtml(String(v)) + '</span></div>';
+  }
+  return '<div class="tnt-card">' +
+    '<div class="tnt-card-top">' +
+      '<div><div class="tnt-office">' + escapeHtml(officeKey(t.apt)) + '</div>' +
+        '<div class="tnt-name">' + escapeHtml(name) + '</div></div>' +
+      '<div class="tnt-pills">' +
+        '<span class="tnt-pill ' + status + '">' + (status === 'finished' ? 'Finished' : 'Active') + '</span>' +
+        '<span class="tnt-pill ' + entity + '">' + (entity === 'legal' ? 'Legal' : 'Physical') + '</span>' +
+      '</div>' +
+    '</div>' +
+    '<div class="tnt-meta">' +
+      m('Rent', rent) + m('Payment', day) +
+      m('Phone', phone) + m('Internet', net) +
+      m('Since', start) +
+    '</div>' +
+    '<div class="tnt-actions" data-apt="' + escapeHtml(officeKey(t.apt)) + '">' +
+      '<button class="tnt-btn" data-act="edit">\u270F\uFE0F Edit</button>' +
+      '<button class="tnt-btn" data-act="drive">\U0001F4C1 Drive</button>' +
+      '<button class="tnt-btn" data-act="upload">\u2B06\uFE0F Upload</button>' +
+      '<button class="tnt-btn" data-act="contract">\U0001F4C4 Contract</button>' +
+    '</div>' +
+  '</div>';
+}
+function switchMainTab(tab) {
+  mainTab = tab;
+  document.querySelectorAll('.top-tab').forEach(function(b) {
+    var on = b.getAttribute('data-maintab') === tab;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  var rentZone    = document.getElementById('rentStickyZone');
+  var tenantsZone = document.getElementById('tenantsStickyZone');
+  var tenantsPane = document.getElementById('tenantsPanel');
+  var mainWrap    = document.getElementById('mainWrap');
+  if (tab === 'rent') {
+    rentZone.style.display    = '';
+    tenantsZone.style.display = 'none';
+    tenantsPane.style.display = 'none';
+    mainWrap.style.display    = '';
+    hideMeterPanel();
+    render();
+  } else if (tab === 'utilities') {
+    rentZone.style.display    = 'none';
+    tenantsZone.style.display = 'none';
+    tenantsPane.style.display = 'none';
+    mainWrap.style.display    = '';
+    renderMeterPanel();
+  } else if (tab === 'tenants') {
+    rentZone.style.display    = 'none';
+    tenantsZone.style.display = '';
+    tenantsPane.style.display = '';
+    mainWrap.style.display    = 'none';
+    if (mainTab !== 'utilities') hideMeterPanel();
+    renderTenantsList();
+  }
+}
+
+(function() {
+  var sInput = document.getElementById('tenantsSearch');
+  if (sInput) sInput.addEventListener('input', renderTenantsList);
+  var body = document.getElementById('tenantsBody');
+  if (body) body.addEventListener('click', function(e) {
+    var btn = e.target.closest('.tnt-btn');
+    if (!btn) return;
+    var wrap = btn.closest('.tnt-actions');
+    var apt = wrap ? wrap.getAttribute('data-apt') : '';
+    if (!apt) return;
+    var act = btn.getAttribute('data-act');
+    if (act === 'edit')     openEdit(apt);
+    else if (act === 'drive')    openTenantFolder(apt);
+    else if (act === 'upload')   chooseTenantFile(apt);
+    else if (act === 'contract') openContractWizard(apt);
+  });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && mainTab === 'tenants') switchMainTab('rent');
+  });
+})();
 
 </script>
 </body>
