@@ -1978,6 +1978,298 @@ body.notification-open { overflow: hidden; touch-action: none; }
 /* Contract wizard identity section */
 .contract-grid .field-wide { grid-column: 1 / -1; }
 #docIdentitySection .contract-grid { margin-top: 8px; }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   2026 Visual Refresh — app shell
+   Keeps the existing behavior and JS hooks intact.
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+:root {
+  --bg: #f4f7fb;
+  --surface: #ffffff;
+  --surface-2: #f8fafc;
+  --surface-3: #eef4f8;
+  --border: #dfe7ef;
+  --border-2: #cad7e3;
+  --ink: #142033;
+  --ink-2: #526173;
+  --ink-3: #8794a6;
+  --forest: #0f2337;
+  --forest-2: #17324b;
+  --sage: #0f9f8d;
+  --sage-l: #2ec4b6;
+  --champagne: #3b82f6;
+  --champagne-l: #93c5fd;
+  --header-h: 72px;
+  --page-max: 1220px;
+  --radius-sm: 12px;
+  --radius: 14px;
+  --radius-lg: 18px;
+  --sh-xs: 0 1px 2px rgba(16,24,40,.04);
+  --sh-sm: 0 8px 24px rgba(16,24,40,.07);
+  --sh-md: 0 16px 40px rgba(16,24,40,.09);
+  --sh-lg: 0 24px 70px rgba(16,24,40,.14);
+}
+
+html { background: #edf2f7; }
+body {
+  background:
+    radial-gradient(circle at top left, rgba(15,159,141,.10), transparent 32vw),
+    linear-gradient(135deg, #f7fafc 0%, #eef4f8 100%);
+  color: var(--ink);
+}
+
+.sidebar {
+  width: 248px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.98), rgba(248,250,252,.96)),
+    #fff;
+  border-right: 1px solid rgba(202,215,227,.9);
+  box-shadow: 8px 0 30px rgba(15,35,55,.05);
+  padding: 14px 12px;
+}
+.sidebar-brand {
+  padding: 10px 10px 18px;
+  border-bottom: 1px solid rgba(202,215,227,.7);
+  gap: 12px;
+}
+.sidebar-logo-mark {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #0f9f8d, #2563eb);
+  color: transparent;
+  position: relative;
+  box-shadow: 0 12px 28px rgba(15,159,141,.24);
+}
+.sidebar-logo-mark::before,
+.sidebar-logo-mark::after {
+  content: '';
+  position: absolute;
+  background: rgba(255,255,255,.95);
+  border-radius: 3px;
+}
+.sidebar-logo-mark::before {
+  left: 12px; right: 12px; top: 9px; bottom: 9px;
+}
+.sidebar-logo-mark::after {
+  width: 4px; height: 4px; left: 19px; top: 15px;
+  box-shadow: 0 8px 0 rgba(15,159,141,.92);
+}
+.sidebar-brand-name {
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 850;
+  letter-spacing: 0;
+}
+.sidebar-brand-sub {
+  color: var(--ink-3);
+  font-size: 11px;
+  font-weight: 650;
+  margin-top: 2px;
+}
+.sidebar-nav {
+  padding: 18px 0;
+  gap: 6px;
+}
+.sidebar-item {
+  min-height: 46px;
+  padding: 0 13px;
+  border-radius: 12px;
+  color: #667386;
+  font-size: 13px;
+  font-weight: 750;
+  letter-spacing: 0;
+}
+.sidebar-item:hover {
+  background: #f1f6fa;
+  color: var(--ink);
+}
+.sidebar-item:focus { outline: none; }
+.sidebar-item:focus-visible {
+  box-shadow: inset 0 0 0 2px rgba(15,159,141,.36);
+}
+.sidebar-item.active {
+  background: linear-gradient(135deg, #e9fbf8, #edf5ff);
+  color: #0f766e;
+  font-weight: 850;
+  box-shadow: inset 0 0 0 1px rgba(15,159,141,.16), 0 8px 20px rgba(15,159,141,.10);
+}
+.sidebar-item.active::before {
+  content: '';
+  width: 4px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--sage);
+  margin-left: -5px;
+}
+.sidebar-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #edf3f8;
+  color: transparent;
+  position: relative;
+  font-size: 0;
+}
+.sidebar-icon::before {
+  color: #65758a;
+  font-size: 15px;
+  line-height: 1;
+}
+.sidebar-item.active .sidebar-icon {
+  background: #fff;
+  color: transparent;
+  box-shadow: 0 6px 16px rgba(15,35,55,.08);
+}
+.sidebar-item.active .sidebar-icon::before { color: var(--sage); }
+.sidebar-item[data-maintab="rent"] .sidebar-icon::before { content: '$'; font-weight: 900; }
+.sidebar-item[data-maintab="utilities"] .sidebar-icon::before { content: 'kW'; font-size: 11px; font-weight: 900; }
+.sidebar-item[data-maintab="tenants"] .sidebar-icon::before { content: 'ID'; font-size: 11px; font-weight: 900; }
+.sidebar-item[data-maintab="reports"] .sidebar-icon::before { content: '%'; font-weight: 900; }
+.sidebar-footer {
+  padding: 14px 10px 6px;
+  border-top: 1px solid rgba(202,215,227,.7);
+  color: var(--ink-3);
+}
+
+.main-area {
+  background: transparent;
+}
+.header {
+  z-index: 12;
+  background: rgba(255,255,255,.84);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  box-shadow: 0 1px 0 rgba(202,215,227,.85);
+}
+.header::after { display: none; }
+.header-inner {
+  max-width: none;
+  padding-left: clamp(18px, 2.6vw, 32px);
+  padding-right: clamp(18px, 2.6vw, 32px);
+}
+.header-logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid rgba(202,215,227,.95);
+  box-shadow: 0 10px 24px rgba(15,35,55,.10);
+}
+.header-title {
+  color: var(--ink);
+  font-size: 17px;
+  letter-spacing: 0;
+}
+.header-sub {
+  color: var(--ink-3);
+  opacity: 1;
+  letter-spacing: .03em;
+}
+.header-add-btn,
+.sync-pill {
+  min-height: 38px;
+  border-radius: 12px;
+  border: 1px solid rgba(202,215,227,.95);
+  background: #fff;
+  color: var(--ink);
+  box-shadow: var(--sh-xs);
+}
+.header-add-btn:hover,
+.sync-pill:hover {
+  background: #f8fbfd;
+  border-color: rgba(15,159,141,.42);
+}
+.sync-pill.ok {
+  background: #ecfdf5;
+  border-color: #bbf7d0;
+  color: #047857;
+}
+.sync-pill.err {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+.sticky-zone {
+  z-index: 11;
+  background: rgba(244,247,251,.82);
+  border-bottom: 1px solid rgba(202,215,227,.78);
+  box-shadow: 0 10px 26px rgba(16,24,40,.04);
+}
+.sticky-inner {
+  max-width: none;
+  padding-left: clamp(18px, 2.6vw, 32px);
+  padding-right: clamp(18px, 2.6vw, 32px);
+}
+.wrap,
+#reportBody {
+  max-width: none;
+  padding-left: clamp(18px, 2.6vw, 32px);
+  padding-right: clamp(18px, 2.6vw, 32px);
+}
+.month-row,
+.search-wrap input,
+.sort-bar,
+.stat-card,
+.prog-panel,
+.chart-panel,
+.report-body,
+.card,
+.tenant-card,
+.tnt-card,
+.rpt-card,
+.rpt-kpi {
+  border-color: rgba(202,215,227,.85);
+  box-shadow: 0 10px 28px rgba(16,24,40,.06);
+}
+.month-row,
+.search-wrap input,
+.sort-bar {
+  border-radius: 14px;
+}
+.chip {
+  border-color: rgba(202,215,227,.9);
+  box-shadow: none;
+}
+.chip.active {
+  background: #142033;
+  border-color: #142033;
+  box-shadow: 0 10px 24px rgba(20,32,51,.16);
+}
+.chip.active::after { display: none; }
+
+@media (max-width: 768px) {
+  .sidebar {
+    width: 100%;
+    height: auto;
+    flex-direction: row;
+    padding: 6px 8px max(6px, env(safe-area-inset-bottom));
+    background: rgba(255,255,255,.94);
+    box-shadow: 0 -10px 28px rgba(15,35,55,.10);
+  }
+  .sidebar-nav { padding: 0; gap: 4px; }
+  .sidebar-item {
+    min-height: 52px;
+    border-radius: 12px;
+    font-size: 10px;
+  }
+  .sidebar-item.active::before { display: none; }
+  .sidebar-icon {
+    width: 26px;
+    height: 26px;
+    border-radius: 9px;
+  }
+  .header-inner,
+  .sticky-inner,
+  .wrap,
+  #reportBody {
+    padding-left: max(14px, env(safe-area-inset-left));
+    padding-right: max(14px, env(safe-area-inset-right));
+  }
+}
 </style>
 </head>
 <body>
@@ -2000,11 +2292,10 @@ body.notification-open { overflow: hidden; touch-action: none; }
     <button class="sidebar-item" data-maintab="tenants"   onclick="switchMainTab('tenants')"   role="tab" aria-selected="false">
       <span class="sidebar-icon">👥</span><span>Tenants</span>
     </button>
-  </nav>
     <button class="sidebar-item" data-maintab="reports" onclick="switchMainTab('reports')" role="tab" aria-selected="false">
       <span class="sidebar-icon">📊</span><span>Reports</span>
     </button>
-  </div><!-- /sidebar-nav -->
+  </nav>
   <div class="sidebar-footer" id="sidebarSync"></div>
 </aside>
 <div class="main-area" id="mainArea">
