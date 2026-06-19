@@ -997,7 +997,7 @@ function openDetail(id) {
 
   const photos = (it.photos && it.photos.length) ? it.photos : (it.photo ? [it.photo] : []);
   const photoBtn = photos.length
-    ? `<button class="btn-ghost" style="width:100%;justify-content:center;margin-bottom:14px;gap:8px;height:44px;font-size:14px" onclick="openPhotoViewer(${JSON.stringify(photos)},0)">
+    ? `<button class="btn-ghost" style="width:100%;justify-content:center;margin-bottom:14px;gap:8px;height:44px;font-size:14px" onclick="openPhotoViewerById('${it.id}')">
         📷 View Photo${photos.length>1?'s ('+photos.length+')':''}
        </button>`
     : `<div style="text-align:center;font-size:42px;margin-bottom:14px">${CAT_ICONS[it.category]||'📦'}</div>`;
@@ -1400,6 +1400,13 @@ function clearAllData() {
 
 // ─── PHOTO VIEWER ─────────────────────────────────────────────
 let pvPhotos = [], pvIdx = 0;
+function openPhotoViewerById(itemId) {
+  const it = items.find(i => i.id === itemId);
+  if (!it) return;
+  const photos = (it.photos && it.photos.length) ? it.photos : (it.photo ? [it.photo] : []);
+  if (!photos.length) return;
+  openPhotoViewer(photos, 0);
+}
 function openPhotoViewer(photos, idx) {
   pvPhotos = photos; pvIdx = idx || 0;
   pvRender();
