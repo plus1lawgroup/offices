@@ -2721,7 +2721,7 @@ body {
 /* ═══════════════════════════════════════════════
    CONSTANTS & STATE
 ═══════════════════════════════════════════════ */
-var API = 'https://script.google.com/macros/s/AKfycbxASPc9uN7bdoBjUuNZeAzZf50Avu3gE3AF-Thkift3Lgjpt1u3vdTb1gJn5JbSPFs-/exec';
+var API = 'https://script.google.com/macros/s/AKfycbw9OAWi2YwL-uwqRfnkqUOWOj6jnxQaShXoQ8Kspp8aKH1qJ1obLtnGYNx79U26LJrv/exec';
 var uploadTenantApt = '';
 
 /* Race fetch (no credentials) against JSONP — fastest winner used.
@@ -4095,7 +4095,7 @@ function saveEdit() {
       }
       if (elecMap[aptValue]) elecMap[aptValue].internet = (fields.internet === 'yes');
       toast('✓ Saved', 'success');
-      closeModal(); render(); refreshTenantsIfOpen();
+      closeModal(); render(); refreshTenantsIfOpen(); refreshContractWizardIfOpen();
     } else { toast('✗ Error', 'error'); }
     btn.textContent = '💾 Save'; btn.disabled = false;
   });
@@ -4290,6 +4290,11 @@ function closeContractWizard() {
   document.getElementById('contractModalBg').classList.add('hidden');
 }
 
+function refreshContractWizardIfOpen() {
+  var bg = document.getElementById('contractModalBg');
+  if (bg && !bg.classList.contains('hidden')) fillDocFromTenant();
+}
+
 function populateDocTenants(selectedApt) {
   var sel = document.getElementById('docTenant');
   sel.innerHTML = tenants.map(function(t) {
@@ -4321,24 +4326,7 @@ function fillDocFromTenant() {
   document.getElementById('docPhone').value = formatArmenianPhone(t.phone || '');
   document.getElementById('docTenantBank').value = t.tenantBank || '';
   document.getElementById('docTenantBankAccount').value = t.tenantBankAccount || '';
-  // Identity fields
-  var isLegal = (t.entityType === 'legal');
-  document.getElementById('docPhysicalBlock').style.display = isLegal ? 'none' : '';
-  document.getElementById('docLegalBlock').style.display   = isLegal ? '' : 'none';
-  if (!isLegal) {
-    document.getElementById('docPassport').value    = t.physicalPassport || '';
-    document.getElementById('docIssuedFrom').value  = t.physicalIssuedFrom || '';
-    document.getElementById('docValidUntil').value  = dateInputValue(t.physicalValidUntil);
-  } else {
-    document.getElementById('docHvhh').value             = t.hvhh || '';
-    document.getElementById('docRegistrationNumber').value = t.registrationNumber || '';
-    document.getElementById('docLegalAddress').value      = t.legalAddress || '';
-    document.getElementById('docCeoName').value           = t.ceoName || '';
-    document.getElementById('docCeoPassport').value       = t.ceoPassport || '';
-    document.getElementById('docCeoAddress').value        = t.ceoAddress || '';
-    document.getElementById('docCeoIssuedFrom').value     = t.ceoIssuedFrom || '';
-    document.getElementById('docCeoValidUntil').value     = dateInputValue(t.ceoValidUntil);
-  }
+  renderDocTenantCard(t);
   document.getElementById('docOriginalContractDate').value = contractStart;
   document.getElementById('docSpecialPeriodStart').value = addMonthsToInputDate(contractEnd, -1);
   document.getElementById('docSpecialPeriodEnd').value = contractEnd;
@@ -4346,6 +4334,32 @@ function fillDocFromTenant() {
   document.getElementById('docSpecialDeadline').value =
     document.getElementById('docSpecialDeadline').value || documentDate;
   updateDocPreview();
+}
+
+
+function renderDocTenantCard(t) {
+  var isLegal = t && t.entityType === 'legal';
+  var required = isLegal
+    ? [['Legal name', t.legalName], ['HVHH', t.hvhh], ['Registration number', t.registrationNumber], ['Director name', t.ceoName], ['Director passport', t.ceoPassport], ['Legal address', t.legalAddress]]
+    : [['Name', t.physicalName || t.name], ['Passport', t.physicalPassport], ['Issued from', t.physicalIssuedFrom], ['Valid until', t.physicalValidUntil], ['Address', t.physicalAddress]];
+  var missing = required.filter(function(r) { return !String(r[1] || '').trim(); }).map(function(r) { return r[0]; });
+  function row(k, v) { return '<div class="contract-preview-row"><strong>' + escapeHtml(k) + '</strong><span>' + escapeHtml(v || '?') + '</span></div>'; }
+  var rows = isLegal
+    ? [row('Legal name', t.legalName), row('HVHH', t.hvhh), row('Registration number', t.registrationNumber), row('Legal address', t.legalAddress), row('Director', t.ceoName), row('Director passport', t.ceoPassport), row('Director address', t.ceoAddress), row('Director issued from', t.ceoIssuedFrom), row('Director valid until', hyDate(t.ceoValidUntil))]
+    : [row('Name', t.physicalName || t.name), row('Passport', t.physicalPassport), row('Issued from', t.physicalIssuedFrom), row('Valid until', hyDate(t.physicalValidUntil)), row('Address', t.physicalAddress)];
+  rows.push(row('Phone', formatArmenianPhone(t.phone || '')));
+  rows.push(row('Bank', t.tenantBank || ''));
+  rows.push(row('Bank account', t.tenantBankAccount || ''));
+  document.getElementById('docIdentitySection').innerHTML =
+    '<div class="contract-section-title">Tenant data <span class="tnt-pill ' + (isLegal ? 'legal' : 'physical') + '">' + (isLegal ? 'Legal' : 'Physical') + '</span></div>' +
+    (missing.length ? '<div class="contract-warning">Missing tenant fields: ' + escapeHtml(missing.join(', ')) + '. Use Edit tenant details.</div>' : '') +
+    '<div class="contract-preview">' + rows.join('') + '</div>' +
+    '<button class="contract-secondary" type="button" onclick="openEditFromWizard()">?? Edit tenant details</button>';
+}
+
+function openEditFromWizard() {
+  var t = selectedDocTenant();
+  if (t) openEdit(t.apt);
 }
 
 function changeDocType() {
@@ -4431,22 +4445,20 @@ function docPayload() {
     tenantName: t ? tenantDisplayName(t) : '',
     entityType: t ? (t.entityType || '') : '',
     // hvhh now read from docHvhh form field above
-    phone: formatArmenianPhone(document.getElementById('docPhone').value),
+    phone: t ? formatArmenianPhone(t.phone || '') : '',
     legalAddress: t ? (t.legalAddress || t.physicalAddress || '') : '',
-    // Identity — read from visible form fields so user edits are captured
-    physicalPassport:   (document.getElementById('docPassport')          ||{}).value || '',
-    physicalIssuedFrom: (document.getElementById('docIssuedFrom')        ||{}).value || '',
-    physicalValidUntil: (document.getElementById('docValidUntil')        ||{}).value || '',
-    passport:           (document.getElementById('docPassport')          ||{}).value || '',
-    hvhh:               (document.getElementById('docHvhh')              ||{}).value || (t ? (t.hvhh || '') : ''),
-    registrationNumber: (document.getElementById('docRegistrationNumber')||{}).value || '',
-    legalAddress:       (document.getElementById('docLegalAddress')      ||{}).value || '',
-    representativeName: (document.getElementById('docCeoName')           ||{}).value || '',
-    ceoName:            (document.getElementById('docCeoName')           ||{}).value || '',
-    ceoPassport:        (document.getElementById('docCeoPassport')       ||{}).value || '',
-    ceoAddress:         (document.getElementById('docCeoAddress')        ||{}).value || '',
-    ceoIssuedFrom:      (document.getElementById('docCeoIssuedFrom')     ||{}).value || '',
-    ceoValidUntil:      (document.getElementById('docCeoValidUntil')     ||{}).value || '',
+    physicalPassport: t ? (t.physicalPassport || '') : '',
+    physicalIssuedFrom: t ? (t.physicalIssuedFrom || '') : '',
+    physicalValidUntil: t ? (t.physicalValidUntil || '') : '',
+    passport: t ? (t.physicalPassport || '') : '',
+    hvhh: t ? (t.hvhh || '') : '',
+    registrationNumber: t ? (t.registrationNumber || '') : '',
+    representativeName: t ? (t.ceoName || '') : '',
+    ceoName: t ? (t.ceoName || '') : '',
+    ceoPassport: t ? (t.ceoPassport || '') : '',
+    ceoAddress: t ? (t.ceoAddress || '') : '',
+    ceoIssuedFrom: t ? (t.ceoIssuedFrom || '') : '',
+    ceoValidUntil: t ? (t.ceoValidUntil || '') : '',
     documentDate: document.getElementById('docDate').value,
     city: document.getElementById('docCity').value.trim(),
     propertyAddress: document.getElementById('docPropertyAddress').value.trim(),
@@ -4461,9 +4473,9 @@ function docPayload() {
     paymentDay: document.getElementById('docPaymentDay').value,
     firstPaymentDate: document.getElementById('docFirstPaymentDate').value,
     depositPaymentDate: document.getElementById('docDepositDate').value,
-    tenantAddress: document.getElementById('docTenantAddress').value.trim(),
-    tenantBank: document.getElementById('docTenantBank').value.trim(),
-    tenantBankAccount: document.getElementById('docTenantBankAccount').value.trim(),
+    tenantAddress: t ? (t.physicalAddress || t.legalAddress || '') : '',
+    tenantBank: t ? (t.tenantBank || '') : '',
+    tenantBankAccount: t ? (t.tenantBankAccount || '') : '',
     extensionNumber: document.getElementById('docExtensionNumber').value,
     originalContractDate: document.getElementById('docOriginalContractDate').value,
     extensionPeriodText: document.getElementById('docExtensionPeriod').value.trim(),
@@ -5590,7 +5602,7 @@ function tenantCardHtml_(t) {
       m('Phone', phone) + m('Internet', net) +
       m('Since', start) +
     '</div>' +
-    '<div class="tnt-actions" data-apt="' + escapeHtml(officeKey(t.apt)) + '">' +
+    '<div class="tnt-actions" data-apt="' + escapeHtml(officeKey(t.apt)) + '" data-id="' + escapeHtml(t.tenancyId || '') + '">' +
       '<button class="tnt-btn" data-act="edit">\u270F\uFE0F Edit</button>' +
       '<button class="tnt-btn" data-act="drive">📁 Drive</button>' +
       '<button class="tnt-btn" data-act="upload">\u2B06\uFE0F Upload</button>' +
@@ -5598,6 +5610,44 @@ function tenantCardHtml_(t) {
     '</div>' +
   '</div>';
 }
+
+function tenantActionUrl(action, params) {
+  var url = API + '?action=' + encodeURIComponent(action);
+  Object.keys(params || {}).forEach(function(k) { url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(params[k] || ''); });
+  return url;
+}
+
+function finishTenancyFlow(tenancyId, apt) {
+  if (!tenancyId) { toast('Run backend backfillTenancyIds first, then reload.', 'error'); return; }
+  var endDate = prompt('End date (YYYY-MM-DD)', todayInputDate());
+  if (!endDate) return;
+  var disposition = prompt('Deposit disposition: returned, withheld, or carried', 'returned') || '';
+  var skip = confirm('Skip / waive unpaid previous utilities? OK = yes, Cancel = tenant pays') ? 'yes' : 'no';
+  jsonpRetry(tenantActionUrl('finishTenancy', { tenancyId: tenancyId, endDate: endDate, depositDisposition: disposition, skipPreviousUtilities: skip }), 2)
+    .then(function(res) { if (!res || !res.ok) throw new Error((res && res.error) || 'Finish failed'); return reloadForMonth(); })
+    .then(function() { toast('Tenancy finished', 'success'); renderTenantsList(); })
+    .catch(function(e) { toast(e.message || 'Finish failed', 'error'); });
+}
+
+function deleteTenancyConfirm(tenancyId) {
+  if (!tenancyId) { toast('Run backend backfillTenancyIds first, then reload.', 'error'); return; }
+  if (!confirm('This permanently deletes this tenancy record. This cannot be undone.')) return;
+  if (!confirm('Confirm again: delete this record permanently?')) return;
+  jsonpRetry(tenantActionUrl('deleteTenancy', { tenancyId: tenancyId }), 2)
+    .then(function(res) { if (!res || !res.ok) throw new Error((res && res.error) || 'Delete failed'); tenants = tenants.filter(function(t) { return t.tenancyId !== tenancyId; }); renderTenantsList(); toast('Tenancy deleted', 'success'); })
+    .catch(function(e) { toast(e.message || 'Delete failed', 'error'); });
+}
+
+function openTenantHistory(apt) {
+  jsonpRetry(tenantActionUrl('getTenantHistory', { apt: apt }), 2)
+    .then(function(res) {
+      if (!res || !res.ok) throw new Error((res && res.error) || 'History failed');
+      var lines = (res.tenancies || []).map(function(t) { return officeKey(t.apt) + ' ? ' + tenantDisplayName(t) + ' ? ' + (t.status || '') + ' ? ' + (t.startDate || '?') + ' ? ' + (t.endDate || '?') + ' ? ' + fmt(t.rent || 0) + ' ?'; });
+      alert(lines.length ? lines.join('\n') : 'No history for office ' + apt);
+    })
+    .catch(function(e) { toast(e.message || 'History failed', 'error'); });
+}
+
 function switchMainTab(tab) {
   mainTab = tab;
   document.querySelectorAll('.sidebar-item').forEach(function(b) {
@@ -5657,12 +5707,16 @@ function switchMainTab(tab) {
     if (!btn) return;
     var wrap = btn.closest('.tnt-actions');
     var apt = wrap ? wrap.getAttribute('data-apt') : '';
+    var tenancyId = wrap ? wrap.getAttribute('data-id') : '';
     if (!apt) return;
     var act = btn.getAttribute('data-act');
     if (act === 'edit')     openEdit(apt);
     else if (act === 'drive')    openTenantFolder(apt);
     else if (act === 'upload')   chooseTenantFile(apt);
     else if (act === 'contract') openContractWizard(apt);
+    else if (act === 'finish')   finishTenancyFlow(tenancyId, apt);
+    else if (act === 'delete')   deleteTenancyConfirm(tenancyId);
+    else if (act === 'history')  openTenantHistory(apt);
   });
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape' && mainTab === 'tenants') switchMainTab('rent');
