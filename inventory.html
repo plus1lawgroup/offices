@@ -414,16 +414,38 @@ button { font-family: inherit; cursor: pointer; }
 .cp-sub   { font-size:12px; color:var(--ink-2); font-weight:700; margin-top:2px; }
 .cp-val   { font-size:24px; font-weight:900; color:#0f766e; line-height:1; }
 .cp-unit  { font-size:11px; color:var(--ink-3); font-weight:700; text-align:right; margin-top:2px; }
-.photo-drop {
-  border:2px dashed var(--border-2); border-radius:var(--radius);
-  background:var(--surface-2); padding:20px; text-align:center;
-  cursor:pointer; position:relative; overflow:hidden; transition:border-color .2s;
+/* ─ MULTI-PHOTO ─ */
+.photos-upload-area { display:flex; flex-direction:column; gap:10px; }
+.photos-grid { display:flex; flex-wrap:wrap; gap:8px; min-height:70px; }
+.photo-thumb-wrap {
+  position:relative; width:88px; height:88px;
+  border-radius:12px; overflow:hidden; flex-shrink:0;
+  background:var(--surface-3); border:1px solid var(--border);
+  box-shadow:var(--sh-xs);
 }
-.photo-drop:hover { border-color:var(--sage); }
-.photo-drop input { position:absolute; inset:0; opacity:0; cursor:pointer; }
-.photo-drop .pd-icon { font-size:28px; margin-bottom:6px; }
-.photo-drop .pd-hint { font-size:12px; color:var(--ink-3); font-weight:600; }
-.photo-thumb { width:100%; max-height:160px; object-fit:cover; border-radius:10px; display:block; }
+.photo-thumb-wrap img { width:100%; height:100%; object-fit:cover; display:block; }
+.photo-thumb-remove {
+  position:absolute; top:3px; right:3px; width:20px; height:20px;
+  border-radius:50%; background:rgba(15,35,55,.72); color:#fff;
+  border:none; cursor:pointer; font-size:13px; font-weight:900;
+  display:flex; align-items:center; justify-content:center; line-height:1;
+}
+.photo-thumb-remove:hover { background:var(--red); }
+.photo-add-btn {
+  width:88px; height:88px; border-radius:12px; flex-shrink:0;
+  border:2px dashed var(--border-2); background:var(--surface-2);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:4px; cursor:pointer; transition:border-color .2s; color:var(--ink-3);
+  font-size:11px; font-weight:700;
+}
+.photo-add-btn:hover { border-color:var(--sage); color:var(--sage); }
+.photo-add-btn .pi { font-size:24px; }
+/* ─ DETAIL CAROUSEL ─ */
+.detail-photos { display:flex; gap:8px; overflow-x:auto; border-radius:var(--radius); margin-bottom:16px; scroll-snap-type:x mandatory; scrollbar-width:none; }
+.detail-photos::-webkit-scrollbar { display:none; }
+.detail-photo-item { flex-shrink:0; scroll-snap-align:start; border-radius:var(--radius); overflow:hidden; }
+.detail-photo-item img { width:calc(100vw - 80px); max-width:480px; height:200px; object-fit:cover; display:block; }
+.photos-count { font-size:11px; color:var(--ink-3); font-weight:600; text-align:center; margin-top:-10px; margin-bottom:14px; }
 .sheet-actions { display:flex; gap:8px; margin-top:22px; }
 .sheet-actions .btn-primary { flex:1; justify-content:center; height:44px; font-size:14px; }
 .sheet-actions .btn-ghost   { height:44px; font-size:14px; }
@@ -653,11 +675,11 @@ button { font-family: inherit; cursor: pointer; }
     <div class="sheet-handle"></div>
     <div class="sheet-title" id="item-sheet-title">Add Item</div>
     <div class="form-group">
-      <label class="form-label">Photo</label>
-      <div class="photo-drop">
-        <input type="file" accept="image/*" id="photo-input" onchange="handlePhoto(event)">
-        <div id="photo-preview"><div class="pd-icon">📷</div><div class="pd-hint">Tap to add a photo</div></div>
+      <label class="form-label">Photos</label>
+      <div class="photos-upload-area">
+        <div class="photos-grid" id="photos-grid"></div>
       </div>
+      <input type="file" accept="image/*" multiple id="photo-input" style="display:none" onchange="handlePhoto(event)">
     </div>
     <div class="form-row">
       <div class="form-group">
@@ -745,7 +767,7 @@ button { font-family: inherit; cursor: pointer; }
 <script>
 // ─── CONFIG ──────────────────────────────────────────────────
 // Paste your Apps Script web app URL here after deploying Code.gs
-const SCRIPT_URL = localStorage.getItem('inv_script_url') || 'https://script.google.com/macros/s/AKfycbyICRqTsu8t6RP3xYrrU0w7bTebo9jtDPY169y7dKqXK5563-mz7RNUHcMpxvAwRi-2/exec';
+const SCRIPT_URL = localStorage.getItem('inv_script_url') || 'https://script.google.com/macros/s/AKfycbx_iNn6_OIjsge_3SsYRmMFU2EzrKlFIL7ANePFYHgeRajtW5YskzhhVFQIKA56so6t/exec';
 
 // ─── STORAGE / API ────────────────────────────────────────────
 const LS = {
@@ -812,7 +834,7 @@ async function uploadPhoto(base64DataUrl, fileName) {
 
 let currentItemId   = null;
 let currentApt      = null;
-let currentPhoto    = null;
+let currentPhotos   = [];   // array of URLs (Drive) or data-URIs (local, pre-upload)
 let currentView     = 'grid';
 let activeCat       = 'All';
 let activeBrowseCat = 'All';
@@ -895,7 +917,8 @@ function renderInventory() {
 function itemCard(it) {
   const credits = priceToCredits(it.price);
   const loc = [it.floor?'Fl '+it.floor:'',it.wing||'',it.unit||''].filter(Boolean).join(' · ');
-  const img = it.photo ? `<div class="card-img"><img src="${it.photo}" alt=""></div>` : `<div class="card-img">${CAT_ICONS[it.category]||'📦'}</div>`;
+  const firstPhoto = (it.photos && it.photos[0]) || it.photo;
+  const img = firstPhoto ? `<div class="card-img"><img src="${firstPhoto}" alt=""></div>` : `<div class="card-img">${CAT_ICONS[it.category]||'📦'}</div>`;
   return `<div class="item-card" onclick="openDetail('${it.id}')">
     ${img}
     <div class="card-body">
@@ -937,8 +960,15 @@ function openDetail(id) {
   const ownerApt = Object.keys(invData).find(apt=>(invData[apt]?.items||[]).includes(id));
   const owner    = (mainTenants||[]).find(t=>t.apt===ownerApt);
 
+  const photos = (it.photos && it.photos.length) ? it.photos : (it.photo ? [it.photo] : []);
+  const photoHTML = photos.length > 1
+    ? `<div class="detail-photos">${photos.map(p=>`<div class="detail-photo-item"><img src="${p}" alt=""></div>`).join('')}</div><div class="photos-count">${photos.length} photos · swipe to see all</div>`
+    : photos.length === 1
+      ? `<div class="detail-img"><img src="${photos[0]}" alt=""></div>`
+      : `<div class="detail-img">${CAT_ICONS[it.category]||'📦'}</div>`;
+
   document.getElementById('detail-content').innerHTML = `
-    ${it.photo?`<div class="detail-img"><img src="${it.photo}" alt=""></div>`:`<div class="detail-img">${CAT_ICONS[it.category]||'📦'}</div>`}
+    ${photoHTML}
     <div class="detail-name">${it.name}</div>
     <div class="detail-cat">${[it.category,it.brand,loc].filter(Boolean).join(' · ')}</div>
     <div class="detail-grid">
@@ -972,7 +1002,7 @@ function editCurrentItem() { closeModal('modal-detail'); openAddItem(currentItem
 
 // ─── ADD / EDIT ITEM ──────────────────────────────────────────
 function openAddItem(id) {
-  currentItemId = id||null; currentPhoto = null;
+  currentItemId = id||null;
   const it = id ? items.find(i=>i.id===id) : null;
   document.getElementById('item-sheet-title').textContent = it ? 'Edit Item' : 'Add Item';
   ['name','brand','floor','wing','unit','notes'].forEach(f => document.getElementById('f-'+f).value = it?.[f]||'');
@@ -980,19 +1010,33 @@ function openAddItem(id) {
   document.getElementById('f-status').value = it?.status||'available';
   document.getElementById('f-price').value  = it?.price||'';
   document.getElementById('btn-del-item').style.display = it ? 'inline-flex' : 'none';
-  currentPhoto = it?.photo||null;
-  const prev = document.getElementById('photo-preview');
-  prev.innerHTML = currentPhoto ? `<img class="photo-thumb" src="${currentPhoto}">` : '<div class="pd-icon">📷</div><div class="pd-hint">Tap to add a photo</div>';
+  // Load existing photos (array) with backward compat for single photo
+  currentPhotos = it?.photos?.length ? [...it.photos] : (it?.photo ? [it.photo] : []);
+  renderPhotoGrid();
   updateCreditPreview();
   openModal('modal-item');
 }
 
 function handlePhoto(e) {
-  const file = e.target.files[0]; if(!file) return;
-  const r = new FileReader();
-  r.onload = ev => { currentPhoto=ev.target.result; document.getElementById('photo-preview').innerHTML=`<img class="photo-thumb" src="${currentPhoto}">`; };
-  r.readAsDataURL(file);
+  const files = Array.from(e.target.files);
+  e.target.value = ''; // reset so same file can be re-added
+  files.forEach(file => {
+    const r = new FileReader();
+    r.onload = ev => { currentPhotos.push(ev.target.result); renderPhotoGrid(); };
+    r.readAsDataURL(file);
+  });
 }
+function renderPhotoGrid() {
+  const el = document.getElementById('photos-grid');
+  const thumbs = currentPhotos.map((src, i) =>
+    `<div class="photo-thumb-wrap">
+      <img src="${src}" alt="">
+      <button class="photo-thumb-remove" onclick="removePhoto(${i})" title="Remove">×</button>
+    </div>`
+  ).join('');
+  el.innerHTML = thumbs + `<div class="photo-add-btn" onclick="document.getElementById('photo-input').click()"><span class="pi">📷</span>Add</div>`;
+}
+function removePhoto(idx) { currentPhotos.splice(idx, 1); renderPhotoGrid(); }
 
 function updateCreditPreview() {
   const price = parseFloat(document.getElementById('f-price').value);
@@ -1009,14 +1053,19 @@ async function saveItem() {
   if (!cat)   { alert('Category is required'); return; }
   if (!price) { alert('Valid price is required'); return; }
 
-  // Upload photo to Drive if it's a local base64 and backend is set
-  let photoUrl = currentPhoto;
-  if (hasBackend() && currentPhoto && currentPhoto.startsWith('data:')) {
-    try {
-      setLoading(true);
-      photoUrl = await uploadPhoto(currentPhoto, name.replace(/\s+/g,'-')+'.jpg');
-    } catch(e) { alert('Photo upload failed: ' + e.message); setLoading(false); return; }
-    finally { setLoading(false); }
+  // Upload any local base64 photos to Drive, keep Drive URLs as-is
+  const finalPhotos = [];
+  for (const p of currentPhotos) {
+    if (hasBackend() && p.startsWith('data:')) {
+      try {
+        setLoading(true);
+        const url = await uploadPhoto(p, name.replace(/\s+/g,'-')+'-'+finalPhotos.length+'.jpg');
+        finalPhotos.push(url);
+      } catch(e) { alert('Photo upload failed: ' + e.message); setLoading(false); return; }
+      finally { setLoading(false); }
+    } else {
+      finalPhotos.push(p);
+    }
   }
 
   const data = {
@@ -1026,7 +1075,8 @@ async function saveItem() {
     wing:document.getElementById('f-wing').value.trim(),
     unit:document.getElementById('f-unit').value.trim(),
     notes:document.getElementById('f-notes').value.trim(),
-    photo: photoUrl
+    photo:  finalPhotos[0] || '',   // backward compat
+    photos: finalPhotos
   };
 
   if (currentItemId) {
@@ -1162,7 +1212,8 @@ function renderBrowse() {
   grid.innerHTML = filtered.map(it => {
     const credits = priceToCredits(it.price);
     const isMine  = myItems.includes(it.id);
-    const img     = it.photo ? `<div class="card-img"><img src="${it.photo}" alt=""></div>` : `<div class="card-img">${CAT_ICONS[it.category]||'📦'}</div>`;
+    const bPhoto  = (it.photos && it.photos[0]) || it.photo;
+    const img     = bPhoto ? `<div class="card-img"><img src="${bPhoto}" alt=""></div>` : `<div class="card-img">${CAT_ICONS[it.category]||'📦'}</div>`;
     let action = '';
     if (tenant && td) {
       if (isMine) {
@@ -1254,8 +1305,13 @@ function save() {
 async function saveItemToBackend(item) {
   if (!hasBackend()) return;
   try {
-    const params = { action:'saveInvItem', ...item, photoUrl: item.photo||'' };
+    const allPhotos = item.photos && item.photos.length ? item.photos : (item.photo ? [item.photo] : []);
+    const params = { action:'saveInvItem', ...item,
+      photoUrl:  allPhotos[0] || '',
+      photoUrls: JSON.stringify(allPhotos)
+    };
     delete params.photo;
+    delete params.photos;
     await apiGet(params);
   } catch(e) { console.warn('saveItem backend error:', e); }
 }
