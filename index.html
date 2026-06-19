@@ -4472,12 +4472,15 @@ function renderDocTenantCard(t) {
     '<div class="contract-section-title">Tenant data <span class="tnt-pill ' + (isLegal ? 'legal' : 'physical') + '">' + (isLegal ? 'Legal' : 'Physical') + '</span></div>' +
     (missing.length ? '<div class="contract-warning">Missing tenant fields: ' + escapeHtml(missing.join(', ')) + '. Use Edit tenant details.</div>' : '') +
     '<div class="contract-preview">' + rows.join('') + '</div>' +
-    '<button class="contract-secondary" type="button" onclick="openEditFromWizard()">?? Edit tenant details</button>';
+    '<button class="contract-secondary" type="button" onclick="openEditFromWizard()">✏️ Edit tenant details</button>';
 }
 
 function openEditFromWizard() {
   var t = selectedDocTenant();
-  if (t) openEdit(t.apt);
+  if (t) {
+    document.getElementById('contractModalBg').classList.add('hidden');
+    openEdit(t.apt);
+  }
 }
 
 function changeDocType() {
