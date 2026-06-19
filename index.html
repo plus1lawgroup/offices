@@ -2336,6 +2336,61 @@ body {
     margin-top: 14px;
   }
 }
+
+
+/* Smooth payments scrolling tune-up */
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+}
+body {
+  min-height: 100dvh;
+  overscroll-behavior: none;
+}
+.main-area {
+  height: 100dvh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  scroll-behavior: smooth;
+  scroll-padding-top: calc(var(--sticky-h) + 12px);
+}
+#rentStickyZone {
+  top: 0;
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+}
+#list {
+  padding-bottom: calc(28px + env(safe-area-inset-bottom));
+}
+.card {
+  content-visibility: auto;
+  contain-intrinsic-size: 264px;
+}
+@media (max-width: 768px) {
+  body {
+    min-height: 100dvh;
+  }
+  .main-area {
+    height: 100dvh;
+    padding-bottom: calc(86px + env(safe-area-inset-bottom));
+    scroll-padding-bottom: calc(96px + env(safe-area-inset-bottom));
+  }
+  #rentStickyZone .sticky-inner {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+  .wrap {
+    padding-top: 10px;
+    padding-bottom: calc(92px + env(safe-area-inset-bottom));
+  }
+  #list {
+    padding-bottom: calc(100px + env(safe-area-inset-bottom));
+  }
+}
+
 </style>
 </head>
 <body>
@@ -4973,8 +5028,9 @@ function rLabel(s) {
 (function() {
   var startY = 0, pulling = false;
   var ptr = document.getElementById('ptrIndicator');
+  var scroller = document.getElementById('mainArea');
   document.addEventListener('touchstart', function(e) {
-    if (window.scrollY === 0) { startY = e.touches[0].clientY; pulling = true; }
+    if (scroller && scroller.scrollTop <= 1) { startY = e.touches[0].clientY; pulling = true; }
   }, { passive: true });
   document.addEventListener('touchmove', function(e) {
     if (!pulling) return;
