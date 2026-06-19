@@ -111,9 +111,17 @@ button { font-family: inherit; cursor: pointer; }
 .sidebar-icon {
   width:30px; height:30px; border-radius:10px;
   display:inline-flex; align-items:center; justify-content:center;
-  background:#edf3f8; font-size:15px; flex-shrink:0; color:#65758a;
+  background:#edf3f8; font-size:0; flex-shrink:0; color:#65758a;
 }
-.sidebar-item.active .sidebar-icon { background:#fff; box-shadow:0 6px 16px rgba(15,35,55,.08); color:var(--sage); }
+.sidebar-icon::before { color:#65758a; font-size:15px; line-height:1; }
+.sidebar-item.active .sidebar-icon { background:#fff; box-shadow:0 6px 16px rgba(15,35,55,.08); }
+.sidebar-item.active .sidebar-icon::before { color:var(--sage); }
+/* match index.html icon tokens */
+.sidebar-item[data-nav="rent"]      .sidebar-icon::before { content:'$';   font-weight:900; }
+.sidebar-item[data-nav="utilities"] .sidebar-icon::before { content:'kW';  font-size:11px; font-weight:900; }
+.sidebar-item[data-nav="tenants"]   .sidebar-icon::before { content:'ID';  font-size:11px; font-weight:900; }
+.sidebar-item[data-nav="reports"]   .sidebar-icon::before { content:'%';   font-weight:900; }
+.sidebar-item[data-nav="inventory"] .sidebar-icon::before { content:'📦'; font-size:17px; }
 .sidebar-footer {
   padding:14px 10px 6px; border-top:1px solid rgba(202,215,227,.7);
   color:var(--ink-3); font-size:11px; flex-shrink:0;
@@ -531,7 +539,8 @@ button { font-family: inherit; cursor: pointer; }
     justify-content:center; text-align:center;
   }
   .sidebar-item.active::before { display:none; }
-  .sidebar-icon { font-size:20px; width:auto; height:auto; background:none; box-shadow:none; border-radius:0; }
+  .sidebar-icon { font-size:0; width:26px; height:26px; background:none; box-shadow:none; border-radius:0; }
+  .sidebar-icon::before { font-size:20px; }
   .sidebar-back { display:none; }
   .main-area { order:1; height:calc(100vh - 60px); }
   .stats-row  { grid-template-columns:repeat(2,1fr); }
@@ -551,20 +560,20 @@ button { font-family: inherit; cursor: pointer; }
     </div>
   </div>
   <nav class="sidebar-nav">
-    <button class="sidebar-item" onclick="window.location.href='index.html'">
-      <span class="sidebar-icon">🏠</span><span>Rent Payments</span>
+    <button class="sidebar-item" data-nav="rent"      onclick="window.location.href='index.html'">
+      <span class="sidebar-icon"></span><span>Rent Payments</span>
     </button>
-    <button class="sidebar-item" onclick="window.location.href='index.html'">
-      <span class="sidebar-icon">⚡</span><span>Utilities</span>
+    <button class="sidebar-item" data-nav="utilities" onclick="window.location.href='index.html'">
+      <span class="sidebar-icon"></span><span>Utilities</span>
     </button>
-    <button class="sidebar-item" onclick="window.location.href='index.html'">
-      <span class="sidebar-icon">👥</span><span>Tenants</span>
+    <button class="sidebar-item" data-nav="tenants"   onclick="window.location.href='index.html'">
+      <span class="sidebar-icon"></span><span>Tenants</span>
     </button>
-    <button class="sidebar-item" onclick="window.location.href='index.html'">
-      <span class="sidebar-icon">📊</span><span>Reports</span>
+    <button class="sidebar-item" data-nav="reports"   onclick="window.location.href='index.html'">
+      <span class="sidebar-icon"></span><span>Reports</span>
     </button>
-    <button class="sidebar-item active">
-      <span class="sidebar-icon">📦</span><span>Inventory</span>
+    <button class="sidebar-item active" data-nav="inventory">
+      <span class="sidebar-icon"></span><span>Inventory</span>
     </button>
   </nav>
   <div class="sidebar-footer">
