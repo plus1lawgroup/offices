@@ -622,6 +622,19 @@ button { font-family: inherit; cursor: pointer; }
         </div>
       </div>
       <div class="settings-section">
+        <div class="settings-section-title">Backend (Google Apps Script)</div>
+        <div class="form-group">
+          <label class="form-label">Apps Script Web App URL</label>
+          <input class="form-input" id="set-script-url" placeholder="https://script.google.com/macros/s/…/exec" style="font-size:12px">
+          <div style="font-size:11px;color:var(--ink-3);margin-top:5px;font-weight:600">Paste your deployed Code.gs URL here. Leave blank to use local storage only.</div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:4px">
+          <button class="btn-primary" style="height:36px;font-size:13px" onclick="saveScriptUrl()">💾 Save URL</button>
+          <button class="btn-ghost" onclick="loadFromBackend().then(()=>{renderInventory();renderTenants();})">🔄 Sync Now</button>
+        </div>
+        <div id="backend-status" style="font-size:12px;color:var(--ink-3);margin-top:8px;font-weight:600"></div>
+      </div>
+      <div class="settings-section">
         <div class="settings-section-title">Data</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn-ghost" onclick="exportData()">⬇ Export JSON</button>
@@ -730,7 +743,11 @@ button { font-family: inherit; cursor: pointer; }
 </div>
 
 <script>
-// ─── STORAGE ─────────────────────────────────────────────────
+// ─── CONFIG ──────────────────────────────────────────────────
+// Paste your Apps Script web app URL here after deploying Code.gs
+const SCRIPT_URL = localStorage.getItem('inv_script_url') || 'https://script.google.com/macros/s/AKfycbyICRqTsu8t6RP3xYrrU0w7bTebo9jtDPY169y7dKqXK5563-mz7RNUHcMpxvAwRi-2/exec';
+
+// ─── STORAGE / API ────────────────────────────────────────────
 const LS = {
   get: k => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
   set: (k,v) => localStorage.setItem(k, JSON.stringify(v))
@@ -739,6 +756,59 @@ const LS = {
 let items    = LS.get('inv_items')       || [];
 let invData  = LS.get('inv_tenant_data') || {};
 let settings = LS.get('inv_settings')    || { rate:24, months:36, unit:1000 };
+
+// Use backend if URL is set, otherwise localStorage-only
+function hasBackend() { return !!SCRIPT_URL; }
+
+async function apiGet(params) {
+  const url = SCRIPT_URL + '?' + new URLSearchParams(params).toString();
+  const res = await fetch(url);
+  return res.json();
+}
+
+async function apiPost(action, body) {
+  const url = SCRIPT_URL + '?action=' + action;
+  const res = await fetch(url, {
+    method: 'POST',
+    body: JSON.stringify(body),
+    headers: { 'Content-Type': 'text/plain' }
+  });
+  return res.json();
+}
+
+async function loadFromBackend() {
+  if (!hasBackend()) return;
+  try {
+    setLoading(true);
+    const [itemsRes, assignRes] = await Promise.all([
+      apiGet({ action: 'getInvItems' }),
+      apiGet({ action: 'getInvAssignments' })
+    ]);
+    if (itemsRes.ok) { items = itemsRes.items || []; LS.set('inv_items', items); }
+    if (assignRes.ok) {
+      // server returns { apt: {credits, items:[]} }
+      invData = assignRes.assignments || {};
+      LS.set('inv_tenant_data', invData);
+    }
+  } catch(e) { console.warn('Backend load failed, using cache:', e); }
+  finally { setLoading(false); }
+}
+
+function setLoading(on) {
+  document.getElementById('header-sub').textContent = on
+    ? '⏳ Syncing with server…'
+    : 'Manage items, credits & assignments';
+}
+
+async function uploadPhoto(base64DataUrl, fileName) {
+  if (!hasBackend()) return base64DataUrl; // store locally if no backend
+  const mimeMatch = base64DataUrl.match(/^data:([^;]+);base64,/);
+  const mimeType  = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+  const data      = base64DataUrl.replace(/^data:[^;]+;base64,/, '');
+  const res = await apiPost('uploadInvPhoto', { fileName: fileName || 'photo.jpg', mimeType, data });
+  if (res.ok) return res.photoUrl;
+  throw new Error('Photo upload failed: ' + res.error);
+}
 
 let currentItemId   = null;
 let currentApt      = null;
@@ -882,14 +952,18 @@ function openDetail(id) {
   openModal('modal-detail');
 }
 
-function toggleAssign(apt, itemId) {
+async function toggleAssign(apt, itemId) {
   if (!invData[apt]) invData[apt] = { credits:0, items:[] };
   const wasMine = (invData[apt].items||[]).includes(itemId);
+  const prevOwners = Object.keys(invData).filter(a=>(invData[a]?.items||[]).includes(itemId));
   Object.keys(invData).forEach(a => { if(invData[a]?.items) invData[a].items=invData[a].items.filter(i=>i!==itemId); });
   const it = items.find(x=>x.id===itemId);
   if (!wasMine) { invData[apt].items.push(itemId); if(it) it.status='assigned'; }
   else          { if(it) it.status='available'; }
-  save(); openDetail(itemId);
+  save();
+  const toSync = new Set([apt, ...prevOwners]);
+  await Promise.all([...toSync].map(a => saveAssignmentToBackend(a)));
+  openDetail(itemId);
 }
 
 function editCurrentItem() { closeModal('modal-detail'); openAddItem(currentItemId); }
@@ -925,13 +999,24 @@ function updateCreditPreview() {
   document.getElementById('prev-monthly').textContent = fmtAmd(monthlyPayment(price))+'/month';
 }
 
-function saveItem() {
+async function saveItem() {
   const name  = document.getElementById('f-name').value.trim();
   const cat   = document.getElementById('f-cat').value;
   const price = parseFloat(document.getElementById('f-price').value);
   if (!name)  { alert('Item name is required'); return; }
   if (!cat)   { alert('Category is required'); return; }
   if (!price) { alert('Valid price is required'); return; }
+
+  // Upload photo to Drive if it's a local base64 and backend is set
+  let photoUrl = currentPhoto;
+  if (hasBackend() && currentPhoto && currentPhoto.startsWith('data:')) {
+    try {
+      setLoading(true);
+      photoUrl = await uploadPhoto(currentPhoto, name.replace(/\s+/g,'-')+'.jpg');
+    } catch(e) { alert('Photo upload failed: ' + e.message); setLoading(false); return; }
+    finally { setLoading(false); }
+  }
+
   const data = {
     name, brand:document.getElementById('f-brand').value.trim(), category:cat,
     status:document.getElementById('f-status').value, price,
@@ -939,23 +1024,28 @@ function saveItem() {
     wing:document.getElementById('f-wing').value.trim(),
     unit:document.getElementById('f-unit').value.trim(),
     notes:document.getElementById('f-notes').value.trim(),
-    photo:currentPhoto
+    photo: photoUrl
   };
+
   if (currentItemId) {
     const idx = items.findIndex(i=>i.id===currentItemId);
     if (idx!==-1) items[idx] = {...items[idx], ...data};
+    await saveItemToBackend(items[idx!==-1?idx:0]);
   } else {
     data.id = Date.now().toString(36)+Math.random().toString(36).slice(2,6);
     items.push(data);
+    await saveItemToBackend(data);
   }
   save(); closeModal('modal-item'); renderInventory();
 }
 
-function deleteCurrentItem() {
+async function deleteCurrentItem() {
   if (!confirm('Delete this item?')) return;
   Object.keys(invData).forEach(a => { if(invData[a]?.items) invData[a].items=invData[a].items.filter(i=>i!==currentItemId); });
   items = items.filter(i=>i.id!==currentItemId);
-  save(); closeModal('modal-item'); renderInventory();
+  save();
+  await deleteItemFromBackend(currentItemId);
+  closeModal('modal-item'); renderInventory();
 }
 
 // ─── TENANTS ──────────────────────────────────────────────────
@@ -1017,11 +1107,13 @@ function updateCrLabel() {
   const cr = parseInt(document.getElementById('cr-input').value)||0;
   document.getElementById('cr-label').textContent = `= ${fmtAmd(cr*settings.unit)}/month purchasing power`;
 }
-function saveCredits() {
+async function saveCredits() {
   if (!currentApt) return;
   if (!invData[currentApt]) invData[currentApt] = { credits:0, items:[] };
   invData[currentApt].credits = parseInt(document.getElementById('cr-input').value)||0;
-  save(); closeModal('modal-credits'); renderTenants();
+  save();
+  await saveAssignmentToBackend(currentApt);
+  closeModal('modal-credits'); renderTenants();
 }
 
 // ─── BROWSE ───────────────────────────────────────────────────
@@ -1103,16 +1195,20 @@ function renderBrowse() {
   }).join('');
 }
 
-function browseToggle(itemId) {
+async function browseToggle(itemId) {
   const apt = document.getElementById('tenant-selector').value;
   if (!apt) return;
   if (!invData[apt]) invData[apt] = { credits:0, items:[] };
   const alreadyMine = (invData[apt].items||[]).includes(itemId);
+  const prevOwners  = Object.keys(invData).filter(a=>(invData[a]?.items||[]).includes(itemId));
   Object.keys(invData).forEach(a => { if(invData[a]?.items) invData[a].items=invData[a].items.filter(i=>i!==itemId); });
   const it = items.find(x=>x.id===itemId);
   if (!alreadyMine) { invData[apt].items.push(itemId); if(it) it.status='assigned'; }
   else              { if(it) it.status='available'; }
-  save(); renderBrowse();
+  save();
+  const toSync = new Set([apt, ...prevOwners]);
+  await Promise.all([...toSync].map(a => saveAssignmentToBackend(a)));
+  renderBrowse();
 }
 
 // ─── SETTINGS ─────────────────────────────────────────────────
@@ -1122,18 +1218,55 @@ function saveSettings() {
   settings.unit   = parseInt(document.getElementById('set-unit').value)||1000;
   LS.set('inv_settings', settings); renderSettings();
 }
+function saveScriptUrl() {
+  const url = (document.getElementById('set-script-url').value||'').trim();
+  localStorage.setItem('inv_script_url', url);
+  // Reload so SCRIPT_URL constant picks up the new value
+  location.reload();
+}
 function renderSettings() {
-  document.getElementById('set-rate').value   = settings.rate;
-  document.getElementById('set-months').value = settings.months;
-  document.getElementById('set-unit').value   = settings.unit;
-  document.getElementById('set-monthly-preview').textContent = fmtAmd(monthlyPayment(120000))+'/month';
-  document.getElementById('set-credits-preview').textContent = priceToCredits(120000);
+  document.getElementById('set-rate').value        = settings.rate;
+  document.getElementById('set-months').value      = settings.months;
+  document.getElementById('set-unit').value        = settings.unit;
+  document.getElementById('set-script-url').value  = localStorage.getItem('inv_script_url') || '';
+  document.getElementById('set-monthly-preview').textContent  = fmtAmd(monthlyPayment(120000))+'/month';
+  document.getElementById('set-credits-preview').textContent  = priceToCredits(120000);
+  const st = document.getElementById('backend-status');
+  if (SCRIPT_URL) {
+    st.textContent = '✅ Backend connected: ' + SCRIPT_URL.slice(0,60) + '…';
+    st.style.color = 'var(--paid)';
+  } else {
+    st.textContent = '⚠️ No backend URL set — data stored in this browser only.';
+    st.style.color = 'var(--amber)';
+  }
 }
 
 // ─── DATA IO ──────────────────────────────────────────────────
 function save() {
   LS.set('inv_items', items);
   LS.set('inv_tenant_data', invData);
+}
+
+async function saveItemToBackend(item) {
+  if (!hasBackend()) return;
+  try {
+    const params = { action:'saveInvItem', ...item, photoUrl: item.photo||'' };
+    delete params.photo;
+    await apiGet(params);
+  } catch(e) { console.warn('saveItem backend error:', e); }
+}
+
+async function deleteItemFromBackend(id) {
+  if (!hasBackend()) return;
+  try { await apiGet({ action:'deleteInvItem', id }); } catch(e) { console.warn(e); }
+}
+
+async function saveAssignmentToBackend(apt) {
+  if (!hasBackend()) return;
+  try {
+    const td = invData[apt] || { credits:0, items:[] };
+    await apiGet({ action:'saveInvAssignment', apt, credits: td.credits, itemIds: JSON.stringify(td.items||[]) });
+  } catch(e) { console.warn('saveAssignment backend error:', e); }
 }
 function exportData() {
   const blob = new Blob([JSON.stringify({items,invData,settings},null,2)],{type:'application/json'});
@@ -1169,9 +1302,12 @@ document.querySelectorAll('.modal-backdrop').forEach(el =>
 );
 
 // ─── INIT ─────────────────────────────────────────────────────
-renderInventory();
-renderSettings();
-populateTenantSelector();
+(async () => {
+  await loadFromBackend();
+  renderInventory();
+  renderSettings();
+  populateTenantSelector();
+})();
 </script>
 </body>
 </html>
