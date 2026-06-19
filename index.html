@@ -2134,7 +2134,8 @@ body {
 .sidebar-item[data-maintab="rent"] .sidebar-icon::before { content: '$'; font-weight: 900; }
 .sidebar-item[data-maintab="utilities"] .sidebar-icon::before { content: 'kW'; font-size: 11px; font-weight: 900; }
 .sidebar-item[data-maintab="tenants"] .sidebar-icon::before { content: 'ID'; font-size: 11px; font-weight: 900; }
-.sidebar-item[data-maintab="reports"] .sidebar-icon::before { content: '%'; font-weight: 900; }
+.sidebar-item[data-maintab="reports"]    .sidebar-icon::before { content: '%';  font-weight: 900; }
+.sidebar-item[data-maintab="inventory"] .sidebar-icon::before { content: '📦'; font-size: 17px; }
 .sidebar-footer {
   padding: 14px 10px 6px;
   border-top: 1px solid rgba(202,215,227,.7);
@@ -2416,8 +2417,8 @@ body {
     <button class="sidebar-item" data-maintab="reports" onclick="switchMainTab('reports')" role="tab" aria-selected="false">
       <span class="sidebar-icon">📊</span><span>Reports</span>
     </button>
-    <button class="sidebar-item" onclick="window.location.href='inventory.html'" role="tab" aria-selected="false">
-      <span class="sidebar-icon">📦</span><span>Inventory</span>
+    <button class="sidebar-item" data-maintab="inventory" onclick="window.location.href='inventory.html'" role="tab" aria-selected="false">
+      <span class="sidebar-icon"></span><span>Inventory</span>
     </button>
   </nav>
   <div class="sidebar-footer" id="sidebarSync"></div>
