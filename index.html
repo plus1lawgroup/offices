@@ -2532,73 +2532,105 @@ body {
 
 <!-- Edit modal -->
 <div class="modal-bg hidden" id="modalBg">
-  <div class="modal">
+  <div class="modal contract-modal">
     <div class="modal-handle"></div>
-    <h2 id="modalTitle">✏️ Edit</h2>
-    <div class="field"><label>Office / Number</label><input type="text" id="eA" autocomplete="off"></div>
     <input type="hidden" id="eN">
-    <div class="field"><label>Phone / Username</label><input type="text" id="eP" autocomplete="off"></div>
-    <div class="field"><label>Contact channel</label>
-      <select id="eCh">
-        <option value="wa">WhatsApp</option>
-        <option value="tg">Telegram</option>
-        <option value="sms">SMS</option>
-      </select>
+    <div class="contract-head">
+      <div>
+        <h2 id="modalTitle">✏️ Edit</h2>
+        <div class="contract-sub">Tenant details, contract terms and property information.</div>
+      </div>
     </div>
-    <div class="field"><label>Payment date (1–31)</label><input type="number" id="eD" min="1" max="31"></div>
-    <div class="field"><label>Rent (֏)</label><input type="number" id="eR"></div>
-    <div class="field"><label>📶 Internet</label>
-      <select id="eInt">
-        <option value="yes">Yes</option>
-        <option value="no">No</option>
-      </select>
+
+    <div class="contract-critical" style="margin-top:14px">
+      <div class="contract-section-title">Office &amp; contact</div>
+      <div class="contract-grid">
+        <div class="field"><label>Office / Number</label><input type="text" id="eA" autocomplete="off"></div>
+        <div class="field"><label>Phone / Username</label><input type="text" id="eP" autocomplete="off"></div>
+        <div class="field"><label>Contact channel</label>
+          <select id="eCh">
+            <option value="wa">WhatsApp</option>
+            <option value="tg">Telegram</option>
+            <option value="sms">SMS</option>
+          </select>
+        </div>
+        <div class="field"><label>Rent (֏)</label><input type="number" id="eR"></div>
+        <div class="field"><label>Payment date (1–31)</label><input type="number" id="eD" min="1" max="31"></div>
+        <div class="field"><label>Internet</label>
+          <select id="eInt">
+            <option value="yes">Yes</option>
+            <option value="no">No</option>
+          </select>
+        </div>
+        <div class="field"><label>Does not pay previous utility</label>
+          <select id="eSkipPrevUtil">
+            <option value="no">No</option>
+            <option value="yes">Yes</option>
+          </select>
+        </div>
+      </div>
     </div>
-    <div class="field"><label>Does not pay previous utility</label>
-      <select id="eSkipPrevUtil">
-        <option value="no">No</option>
-        <option value="yes">Yes</option>
-      </select>
-    </div>
-    <div class="contract-fields" id="contractFields">
-      <div class="field"><label>Person type</label>
-        <select id="eEntityType" onchange="updateEntityFields()">
-          <option value="physical">Individual</option>
-          <option value="legal">Legal entity</option>
-        </select>
+
+    <div class="contract-section">
+      <div class="contract-section-title">Identity</div>
+      <div class="contract-grid">
+        <div class="field"><label>Person type</label>
+          <select id="eEntityType" onchange="updateEntityFields()">
+            <option value="physical">Individual</option>
+            <option value="legal">Legal entity</option>
+          </select>
+        </div>
       </div>
       <div id="physicalFields">
-        <div class="field"><label>Individual name</label><input type="text" id="ePhysicalName" autocomplete="off"></div>
-        <div class="field"><label>Passport</label><input type="text" id="ePhysicalPassport" autocomplete="off"></div>
-        <div class="field"><label>Address</label><input type="text" id="ePhysicalAddress" autocomplete="off"></div>
-        <div class="field"><label>Issued by</label><input type="text" id="ePhysicalIssuedFrom" autocomplete="off"></div>
-        <div class="field"><label>Valid until</label><input type="date" id="ePhysicalValidUntil"></div>
+        <div class="contract-grid" style="margin-top:10px">
+          <div class="field"><label>Individual name</label><input type="text" id="ePhysicalName" autocomplete="off"></div>
+          <div class="field"><label>Passport</label><input type="text" id="ePhysicalPassport" autocomplete="off"></div>
+          <div class="field field-wide"><label>Address</label><input type="text" id="ePhysicalAddress" autocomplete="off"></div>
+          <div class="field"><label>Issued by</label><input type="text" id="ePhysicalIssuedFrom" autocomplete="off"></div>
+          <div class="field"><label>Valid until</label><input type="date" id="ePhysicalValidUntil"></div>
+        </div>
       </div>
       <div id="legalFields" style="display:none">
-        <div class="field"><label>Legal entity name</label><input type="text" id="eLegalName" autocomplete="off"></div>
-        <div class="field"><label>Tax ID</label><input type="text" id="eHvhh" autocomplete="off"></div>
-        <div class="field"><label>Legal address</label><input type="text" id="eLegalAddress" autocomplete="off"></div>
-        <div class="field"><label>Registration number</label><input type="text" id="eRegistrationNumber" autocomplete="off"></div>
-        <div class="field"><label>Director name</label><input type="text" id="eCeoName" autocomplete="off"></div>
-        <div class="field"><label>Director passport</label><input type="text" id="eCeoPassport" autocomplete="off"></div>
-        <div class="field"><label>Director address</label><input type="text" id="eCeoAddress" autocomplete="off"></div>
-        <div class="field"><label>Director issued by</label><input type="text" id="eCeoIssuedFrom" autocomplete="off"></div>
-        <div class="field"><label>Director valid until</label><input type="date" id="eCeoValidUntil"></div>
+        <div class="contract-grid" style="margin-top:10px">
+          <div class="field field-wide"><label>Legal entity name</label><input type="text" id="eLegalName" autocomplete="off"></div>
+          <div class="field"><label>Tax ID</label><input type="text" id="eHvhh" autocomplete="off"></div>
+          <div class="field"><label>Registration number</label><input type="text" id="eRegistrationNumber" autocomplete="off"></div>
+          <div class="field field-wide"><label>Legal address</label><input type="text" id="eLegalAddress" autocomplete="off"></div>
+          <div class="field"><label>Director name</label><input type="text" id="eCeoName" autocomplete="off"></div>
+          <div class="field"><label>Director passport</label><input type="text" id="eCeoPassport" autocomplete="off"></div>
+          <div class="field field-wide"><label>Director address</label><input type="text" id="eCeoAddress" autocomplete="off"></div>
+          <div class="field"><label>Director issued by</label><input type="text" id="eCeoIssuedFrom" autocomplete="off"></div>
+          <div class="field"><label>Director valid until</label><input type="date" id="eCeoValidUntil"></div>
+        </div>
       </div>
-      <div class="field"><label>Contract start</label><input type="date" id="eStartDate"></div>
-      <div class="field"><label>Contract end</label><input type="date" id="eEndDate"></div>
-      <div class="field"><label>Payment day</label><input type="number" id="ePaymentDate" min="1" max="31"></div>
-      <div class="field"><label>First payment date</label><input type="date" id="eFirstPaymentDate"></div>
-      <div class="field"><label>Deposit payment date</label><input type="date" id="eDepositDate"></div>
-      <div class="field"><label>City</label><input type="text" id="eCity" autocomplete="off"></div>
-      <div class="field"><label>Property address</label><input type="text" id="ePropertyAddress" autocomplete="off"></div>
-      <div class="field"><label>Floor</label><input type="text" id="eFloor" autocomplete="off"></div>
-      <div class="field"><label>Wing</label><input type="text" id="eWing" autocomplete="off"></div>
-      <div class="field"><label>Unit</label><input type="text" id="eUnitDescription" autocomplete="off"></div>
-      <div class="field"><label>Purpose</label><input type="text" id="ePurpose" autocomplete="off"></div>
-      <div class="field"><label>Tenant bank</label><input type="text" id="eTenantBank" autocomplete="off"></div>
-      <div class="field"><label>Bank account</label><input type="text" id="eTenantBankAccount" autocomplete="off"></div>
     </div>
-    <div class="modal-btns">
+
+    <div class="contract-section">
+      <div class="contract-section-title">Property and terms</div>
+      <div class="contract-grid">
+        <div class="field"><label>City</label><input type="text" id="eCity" autocomplete="off"></div>
+        <div class="field field-wide"><label>Property address</label><input type="text" id="ePropertyAddress" autocomplete="off"></div>
+        <div class="field"><label>Floor</label><input type="text" id="eFloor" autocomplete="off"></div>
+        <div class="field"><label>Wing</label><input type="text" id="eWing" autocomplete="off"></div>
+        <div class="field"><label>Unit</label><input type="text" id="eUnitDescription" autocomplete="off"></div>
+        <div class="field"><label>Purpose</label><input type="text" id="ePurpose" autocomplete="off"></div>
+        <div class="field"><label>Contract start</label><input type="date" id="eStartDate"></div>
+        <div class="field"><label>Contract end</label><input type="date" id="eEndDate"></div>
+        <div class="field"><label>Payment day</label><input type="number" id="ePaymentDate" min="1" max="31"></div>
+        <div class="field"><label>First payment date</label><input type="date" id="eFirstPaymentDate"></div>
+        <div class="field"><label>Deposit payment date</label><input type="date" id="eDepositDate"></div>
+      </div>
+    </div>
+
+    <div class="contract-section">
+      <div class="contract-section-title">Financial</div>
+      <div class="contract-grid">
+        <div class="field"><label>Tenant bank</label><input type="text" id="eTenantBank" autocomplete="off"></div>
+        <div class="field field-wide"><label>Bank account</label><input type="text" id="eTenantBankAccount" autocomplete="off"></div>
+      </div>
+    </div>
+
+    <div class="modal-btns contract-actions">
       <button class="modal-cancel" onclick="closeModal()">Cancel</button>
       <button class="modal-end" id="modalEndBtn" onclick="endContract()" style="display:none">End Contract</button>
       <button class="modal-save" id="modalSaveBtn" onclick="saveEdit()">💾 Save</button>
