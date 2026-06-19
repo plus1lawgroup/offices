@@ -927,10 +927,11 @@ function openDetail(id) {
       const mine = (td.items||[]).includes(id);
       const over = !mine && credits > rem;
       return `<span class="t-chip${mine?' selected':''}${over?' over-budget':''}"
-        onclick="${over?'':(`toggleAssign(${JSON.stringify(t.apt)},${JSON.stringify(id)})`)}">
-        Office ${t.apt} · ${t.name}<span class="t-chip-cr">${rem}cr left</span></span>`;
+        title="${over?`Not enough credits (needs ${credits}, has ${rem} left)`:mine?'Click to unassign':'Click to assign'}"
+        onclick="${over?`showToast('⚠️ Not enough credits (needs ${credits}, has ${rem} left)')`:(`toggleAssign(${JSON.stringify(t.apt)},${JSON.stringify(id)})`)}">
+        Office ${t.apt} · ${t.name}<span class="t-chip-cr">${mine?'assigned':`${rem}cr left`}</span></span>`;
     }).join('');
-    assignHTML = `<div class="assign-section"><div class="assign-label">Assign to tenant</div><div class="tenant-chips">${chips}</div></div>`;
+    assignHTML = `<div class="assign-section"><div class="assign-label">Tap a tenant to assign / unassign — saves instantly</div><div class="tenant-chips">${chips}</div></div>`;
   }
 
   const ownerApt = Object.keys(invData).find(apt=>(invData[apt]?.items||[]).includes(id));
@@ -961,9 +962,10 @@ async function toggleAssign(apt, itemId) {
   if (!wasMine) { invData[apt].items.push(itemId); if(it) it.status='assigned'; }
   else          { if(it) it.status='available'; }
   save();
+  openDetail(itemId); // optimistic — update UI immediately
+  showToast(wasMine ? '↩ Unassigned' : `✅ Assigned to Office ${apt}`);
   const toSync = new Set([apt, ...prevOwners]);
-  await Promise.all([...toSync].map(a => saveAssignmentToBackend(a)));
-  openDetail(itemId);
+  Promise.all([...toSync].map(a => saveAssignmentToBackend(a))); // background sync, no await
 }
 
 function editCurrentItem() { closeModal('modal-detail'); openAddItem(currentItemId); }
@@ -1090,6 +1092,7 @@ function renderTenants() {
             : '<span style="font-size:12px;color:var(--ink-3);font-weight:600">No items assigned</span>'}
         </div>
         <button class="t-set-btn" onclick="openSetCredits('${t.apt}','${(t.name||'').replace(/'/g,"\\'")}')">⚙️ Credits</button>
+        <button class="t-set-btn" style="border-color:var(--sage);color:var(--sage)" onclick="goToBrowse('${t.apt}')">🛒 Assign Items</button>
       </div>
     </div>`;
   }).join('');
@@ -1206,9 +1209,10 @@ async function browseToggle(itemId) {
   if (!alreadyMine) { invData[apt].items.push(itemId); if(it) it.status='assigned'; }
   else              { if(it) it.status='available'; }
   save();
+  renderBrowse(); // optimistic — update UI immediately
+  showToast(alreadyMine ? '↩ Returned' : `✅ Picked for Office ${apt}`);
   const toSync = new Set([apt, ...prevOwners]);
-  await Promise.all([...toSync].map(a => saveAssignmentToBackend(a)));
-  renderBrowse();
+  Promise.all([...toSync].map(a => saveAssignmentToBackend(a))); // background sync, no await
 }
 
 // ─── SETTINGS ─────────────────────────────────────────────────
@@ -1292,6 +1296,32 @@ function clearAllData() {
   items=[]; invData={}; settings={rate:24,months:36,unit:1000};
   save(); LS.set('inv_settings',settings);
   renderInventory(); renderTenants(); renderSettings();
+}
+
+// ─── TOAST ────────────────────────────────────────────────────
+function showToast(msg) {
+  let t = document.getElementById('inv-toast');
+  if (!t) {
+    t = document.createElement('div'); t.id = 'inv-toast';
+    t.style.cssText = 'position:fixed;bottom:88px;left:50%;transform:translateX(-50%) translateY(12px);z-index:999;'
+      +'background:var(--forest);color:#fff;padding:11px 22px;border-radius:999px;font-size:14px;font-weight:800;'
+      +'box-shadow:0 8px 24px rgba(15,35,55,.22);transition:opacity .25s,transform .25s;pointer-events:none;white-space:nowrap;opacity:0;';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1'; t.style.transform = 'translateX(-50%) translateY(0)';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.style.opacity='0'; t.style.transform='translateX(-50%) translateY(12px)'; }, 2400);
+}
+
+// ─── GOTO BROWSE ──────────────────────────────────────────────
+function goToBrowse(apt) {
+  const browseTabBtn = document.querySelectorAll('.top-tab')[2];
+  switchPanel('browse', browseTabBtn);
+  setTimeout(() => {
+    const sel = document.getElementById('tenant-selector');
+    if (sel) { sel.value = apt; renderBrowse(); }
+  }, 0);
 }
 
 // ─── MODAL ────────────────────────────────────────────────────
