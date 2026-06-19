@@ -282,9 +282,6 @@ button { font-family: inherit; cursor: pointer; }
 .s-available { background:var(--paid-bg);  color:var(--paid); }
 .s-assigned  { background:var(--amber-l);  color:var(--amber); }
 .s-ordered   { background:var(--purple-l); color:var(--purple); }
-.s-paid      { background:var(--paid-bg);  color:var(--paid); }
-.s-unpaid    { background:var(--unpaid-l); color:var(--unpaid); }
-.s-deposit   { background:var(--deposit-l);color:var(--deposit); }
 .status-dot  { width:6px; height:6px; border-radius:50%; background:currentColor; }
 
 /* ── EMPTY STATE ── */
@@ -292,7 +289,7 @@ button { font-family: inherit; cursor: pointer; }
 .empty-state .emo  { font-size:48px; margin-bottom:14px; }
 .empty-state p { font-size:15px; font-weight:600; }
 
-/* ━━ TENANT CARD (matches main app style) ━━━━━━━━ */
+/* ━━ TENANT CARD ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .t-card {
   background:
     radial-gradient(circle at 92% -8%,rgba(20,184,166,.10),transparent 34%),
@@ -337,8 +334,6 @@ button { font-family: inherit; cursor: pointer; }
   box-shadow:0 8px 18px rgba(7,26,47,.2),inset 0 1px 0 rgba(255,255,255,.12);
 }
 .t-rent-sub { font-size:10px; color:#8392a8; font-weight:750; }
-
-/* Inventory info strip below the top */
 .t-inv-strip {
   background:linear-gradient(180deg,rgba(243,247,251,.72),#f4f8fb);
   border-top:1px solid rgba(203,213,225,.62);
@@ -367,8 +362,6 @@ button { font-family: inherit; cursor: pointer; }
   margin-left:auto;
 }
 .t-set-btn:hover { background:var(--surface-2); border-color:var(--sage); color:var(--ink); }
-
-/* No snapshot banner */
 .no-snapshot {
   background:var(--amber-l); border:1px solid rgba(217,119,6,.2);
   border-radius:var(--radius); padding:16px 20px;
@@ -693,7 +686,7 @@ button { font-family: inherit; cursor: pointer; }
     <div class="form-row">
       <div class="form-group"><label class="form-label">Floor</label><input class="form-input" id="f-floor" placeholder="3"></div>
       <div class="form-group"><label class="form-label">Wing</label><input class="form-input" id="f-wing" placeholder="A"></div>
-      <div class="form-group"><label class="form-label">Unit</label><input class="form-input" id="f-unit" placeholder="301"></div>
+      <div class="form-group"><label class="form-label">Unit / Office</label><input class="form-input" id="f-unit" placeholder="301"></div>
     </div>
     <div class="form-group">
       <label class="form-label">Notes</label>
@@ -744,15 +737,14 @@ const LS = {
 };
 
 let items    = LS.get('inv_items')       || [];
-// inv_tenant_data: { [apt]: { credits: N, items: [itemId,...] } }
 let invData  = LS.get('inv_tenant_data') || {};
 let settings = LS.get('inv_settings')    || { rate:24, months:36, unit:1000 };
 
-let currentItemId = null;
-let currentApt    = null; // for credit assignment
-let currentPhoto  = null;
-let currentView   = 'grid';
-let activeCat     = 'All';
+let currentItemId   = null;
+let currentApt      = null;
+let currentPhoto    = null;
+let currentView     = 'grid';
+let activeCat       = 'All';
 let activeBrowseCat = 'All';
 
 const CATS = ['Furniture','Electronics','Plants','Heating','Cooling','Internet','Blinds / Жалюзи','Lighting','Other'];
@@ -765,15 +757,12 @@ const STATUS_LABELS = { available:'Available', assigned:'Assigned', ordered:'Ord
 // ─── GET MAIN-APP TENANTS ────────────────────────────────────
 function getMainTenants() {
   const cache = LS.get('plusone_snapshot_v4');
-  if (!cache) return null; // null = snapshot missing
+  if (!cache) return null;
   const t = cache.data && cache.data.t;
   if (!t || !t.tenants) return null;
   return t.tenants.filter(t => t && t.apt && String(t.name||'').trim().toLowerCase() !== 'ազատ');
 }
-
-function tenantInvData(apt) {
-  return invData[apt] || { credits: 0, items: [] };
-}
+function tenantInvData(apt) { return invData[apt] || { credits:0, items:[] }; }
 
 // ─── MATH ─────────────────────────────────────────────────────
 function monthlyPayment(price) {
@@ -829,10 +818,8 @@ function renderInventory() {
   if (!filtered.length) {
     grid.className=''; grid.innerHTML='<div class="empty-state"><div class="emo">📭</div><p>No items found</p></div>'; return;
   }
-  grid.className = currentView==='list' ? '' : 'cards-grid';
-  grid.innerHTML  = (currentView==='list'
-    ? `<div class="cards-grid" style="grid-template-columns:1fr">${filtered.map(itemCard).join('')}</div>`
-    : filtered.map(itemCard).join(''));
+  grid.className = 'cards-grid';
+  grid.innerHTML = filtered.map(itemCard).join('');
 }
 
 function itemCard(it) {
@@ -860,13 +847,12 @@ function openDetail(id) {
   const credits = priceToCredits(it.price);
   const loc = [it.floor?'Floor '+it.floor:'',it.wing?'Wing '+it.wing:'',it.unit||''].filter(Boolean).join(' · ');
 
-  // Build assign chips from main tenants
-  let assignHTML = '';
   const mainTenants = getMainTenants();
+  let assignHTML = '';
   if (mainTenants && mainTenants.length) {
     const chips = mainTenants.map(t => {
       const td   = tenantInvData(t.apt);
-      const used = (td.items||[]).reduce((s,iid)=>{const ii=items.find(x=>x.id===iid);return s+(ii?priceToCredits(ii.price):0);},0);
+      const used = (td.items||[]).reduce((s,iid)=>{ const ii=items.find(x=>x.id===iid); return s+(ii?priceToCredits(ii.price):0); },0);
       const rem  = (td.credits||0)-used;
       const mine = (td.items||[]).includes(id);
       const over = !mine && credits > rem;
@@ -878,8 +864,7 @@ function openDetail(id) {
   }
 
   const ownerApt = Object.keys(invData).find(apt=>(invData[apt]?.items||[]).includes(id));
-  const ownerTenants = mainTenants||[];
-  const owner = ownerTenants.find(t=>t.apt===ownerApt);
+  const owner    = (mainTenants||[]).find(t=>t.apt===ownerApt);
 
   document.getElementById('detail-content').innerHTML = `
     ${it.photo?`<div class="detail-img"><img src="${it.photo}" alt=""></div>`:`<div class="detail-img">${CAT_ICONS[it.category]||'📦'}</div>`}
@@ -899,17 +884,11 @@ function openDetail(id) {
 
 function toggleAssign(apt, itemId) {
   if (!invData[apt]) invData[apt] = { credits:0, items:[] };
-  // Remove from all tenants
-  Object.keys(invData).forEach(a => {
-    if (invData[a]?.items) invData[a].items = invData[a].items.filter(i=>i!==itemId);
-  });
-  const wasMine = false; // already removed above
-  invData[apt].items.push(itemId);
+  const wasMine = (invData[apt].items||[]).includes(itemId);
+  Object.keys(invData).forEach(a => { if(invData[a]?.items) invData[a].items=invData[a].items.filter(i=>i!==itemId); });
   const it = items.find(x=>x.id===itemId);
-  if (it) it.status = 'assigned';
-  // Check if still assigned to anyone after toggle
-  const allAssigned = Object.values(invData).flatMap(d=>d.items||[]);
-  if (!allAssigned.includes(itemId)) { if(it) it.status = 'available'; }
+  if (!wasMine) { invData[apt].items.push(itemId); if(it) it.status='assigned'; }
+  else          { if(it) it.status='available'; }
   save(); openDetail(itemId);
 }
 
@@ -947,16 +926,28 @@ function updateCreditPreview() {
 }
 
 function saveItem() {
-  const name=document.getElementById('f-name').value.trim(), cat=document.getElementById('f-cat').value, price=parseFloat(document.getElementById('f-price').value);
-  if (!name) { alert('Item name is required'); return; }
-  if (!cat)  { alert('Category is required'); return; }
-  if (!price){ alert('Valid price is required'); return; }
-  const data = { name, brand:document.getElementById('f-brand').value.trim(), category:cat,
+  const name  = document.getElementById('f-name').value.trim();
+  const cat   = document.getElementById('f-cat').value;
+  const price = parseFloat(document.getElementById('f-price').value);
+  if (!name)  { alert('Item name is required'); return; }
+  if (!cat)   { alert('Category is required'); return; }
+  if (!price) { alert('Valid price is required'); return; }
+  const data = {
+    name, brand:document.getElementById('f-brand').value.trim(), category:cat,
     status:document.getElementById('f-status').value, price,
-    floor:document.getElementById('f-floor').value.trim(), wing:document.getElementById('f-wing').value.trim(),
-    unit:document.getElementById('f-unit').value.trim(), notes:document.getElementById('f-notes').value.trim(), photo:currentPhoto };
-  if (currentItemId) { const idx=items.findIndex(i=>i.id===currentItemId); if(idx!==-1) items[idx]={...items[idx],...data}; }
-  else { data.id=Date.now().toString(36)+Math.random().toString(36).slice(2,6); items.push(data); }
+    floor:document.getElementById('f-floor').value.trim(),
+    wing:document.getElementById('f-wing').value.trim(),
+    unit:document.getElementById('f-unit').value.trim(),
+    notes:document.getElementById('f-notes').value.trim(),
+    photo:currentPhoto
+  };
+  if (currentItemId) {
+    const idx = items.findIndex(i=>i.id===currentItemId);
+    if (idx!==-1) items[idx] = {...items[idx], ...data};
+  } else {
+    data.id = Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+    items.push(data);
+  }
   save(); closeModal('modal-item'); renderInventory();
 }
 
@@ -1002,11 +993,13 @@ function renderTenants() {
         </div>
       </div>
       <div class="t-inv-strip">
-        <span class="t-inv-credits">📦 ${rem >= 0 ? rem : 0} / ${td.credits||0} cr</span>
+        <span class="t-inv-credits">📦 ${Math.max(0,rem)} / ${td.credits||0} cr</span>
         <div class="t-inv-items">
-          ${assigned.length ? assigned.map(it=>`<span class="t-inv-item-tag">${CAT_ICONS[it.category]||'📦'} ${it.name} <strong>${priceToCredits(it.price)}cr</strong></span>`).join('') : '<span style="font-size:12px;color:var(--ink-3);font-weight:600">No items assigned</span>'}
+          ${assigned.length
+            ? assigned.map(it=>`<span class="t-inv-item-tag">${CAT_ICONS[it.category]||'📦'} ${it.name} <strong>${priceToCredits(it.price)}cr</strong></span>`).join('')
+            : '<span style="font-size:12px;color:var(--ink-3);font-weight:600">No items assigned</span>'}
         </div>
-        <button class="t-set-btn" onclick="openSetCredits('${t.apt}','${t.name.replace(/'/g,"\\'")}')">⚙️ Credits</button>
+        <button class="t-set-btn" onclick="openSetCredits('${t.apt}','${(t.name||'').replace(/'/g,"\\'")}')">⚙️ Credits</button>
       </div>
     </div>`;
   }).join('');
@@ -1041,10 +1034,10 @@ function populateTenantSelector() {
 }
 
 function renderBrowse() {
-  const apt    = document.getElementById('tenant-selector').value;
+  const apt         = document.getElementById('tenant-selector').value;
   const mainTenants = getMainTenants()||[];
-  const tenant = mainTenants.find(t=>t.apt===apt);
-  const bb     = document.getElementById('browse-budget');
+  const tenant      = mainTenants.find(t=>t.apt===apt);
+  const bb          = document.getElementById('browse-budget');
 
   if (tenant) {
     const td       = tenantInvData(apt);
@@ -1068,9 +1061,10 @@ function renderBrowse() {
   const grid     = document.getElementById('browse-grid');
   if (!filtered.length) { grid.innerHTML='<div class="empty-state"><div class="emo">📭</div><p>No items</p></div>'; return; }
 
-  const td          = apt ? tenantInvData(apt) : null;
-  const myItems     = td ? (td.items||[]) : [];
-  grid.innerHTML    = filtered.map(it => {
+  const td      = apt ? tenantInvData(apt) : null;
+  const myItems = td ? (td.items||[]) : [];
+
+  grid.innerHTML = filtered.map(it => {
     const credits = priceToCredits(it.price);
     const isMine  = myItems.includes(it.id);
     const img     = it.photo ? `<div class="card-img"><img src="${it.photo}" alt=""></div>` : `<div class="card-img">${CAT_ICONS[it.category]||'📦'}</div>`;
@@ -1078,8 +1072,8 @@ function renderBrowse() {
     if (tenant && td) {
       if (isMine) {
         action = `<button onclick="event.stopPropagation();browseToggle('${it.id}')" style="margin-top:8px;width:100%;padding:7px;border-radius:10px;border:1.5px solid var(--red);background:var(--red-l);color:var(--red);font-weight:800;font-size:12px;cursor:pointer;font-family:inherit">↩ Return</button>`;
-      } else if (it.status==='available'||isMine) {
-        const used2 = myItems.reduce((s,iid)=>{const ii=items.find(x=>x.id===iid);return s+(ii?priceToCredits(ii.price):0);},0);
+      } else if (it.status==='available') {
+        const used2 = myItems.reduce((s,iid)=>{ const ii=items.find(x=>x.id===iid); return s+(ii?priceToCredits(ii.price):0); },0);
         const rem2  = (td.credits||0)-used2;
         if (credits<=rem2) {
           action = `<button onclick="event.stopPropagation();browseToggle('${it.id}')" style="margin-top:8px;width:100%;padding:7px;border-radius:10px;border:none;background:var(--forest);color:#fff;font-weight:800;font-size:12px;cursor:pointer;font-family:inherit">＋ Pick (${credits} cr)</button>`;
@@ -1101,7 +1095,7 @@ function renderBrowse() {
         <div style="font-size:12px;color:var(--ink-3);font-weight:600">${fmtAmd(it.price)}</div>
         <div class="card-meta">
           <span class="credit-badge">${credits} cr</span>
-          <span class="status-badge s-${st}"><span class="status-dot"></span>${isMine?'Yours':STATUS_LABELS[st]}</span>
+          <span class="status-badge s-${st}"><span class="status-dot"></span>${isMine?'Yours':STATUS_LABELS[st]||st}</span>
         </div>
         ${action}
       </div>
@@ -1114,12 +1108,11 @@ function browseToggle(itemId) {
   if (!apt) return;
   if (!invData[apt]) invData[apt] = { credits:0, items:[] };
   const alreadyMine = (invData[apt].items||[]).includes(itemId);
-  // Remove from all
   Object.keys(invData).forEach(a => { if(invData[a]?.items) invData[a].items=invData[a].items.filter(i=>i!==itemId); });
   const it = items.find(x=>x.id===itemId);
   if (!alreadyMine) { invData[apt].items.push(itemId); if(it) it.status='assigned'; }
-  else { if(it) it.status='available'; }
-  save(); closeModal('modal-detail'); renderBrowse();
+  else              { if(it) it.status='available'; }
+  save(); renderBrowse();
 }
 
 // ─── SETTINGS ─────────────────────────────────────────────────
@@ -1149,24 +1142,33 @@ function exportData() {
 function importData(e) {
   const file=e.target.files[0]; if(!file) return;
   const r=new FileReader();
-  r.onload=ev=>{ try { const d=JSON.parse(ev.target.result); if(d.items) items=d.items; if(d.invData) invData=d.invData; if(d.settings) settings=d.settings; save(); LS.set('inv_settings',settings); renderInventory(); renderSettings(); alert('Imported!'); } catch{alert('Invalid file');} };
+  r.onload=ev=>{
+    try {
+      const d=JSON.parse(ev.target.result);
+      if(d.items)    items=d.items;
+      if(d.invData)  invData=d.invData;
+      if(d.settings) settings=d.settings;
+      save(); LS.set('inv_settings',settings);
+      renderInventory(); renderSettings(); alert('Imported!');
+    } catch { alert('Invalid file'); }
+  };
   r.readAsText(file);
 }
 function clearAllData() {
   if(!confirm('Clear ALL inventory data?')) return;
-  items={}; invData={}; settings={rate:24,months:36,unit:1000};
-  save(); LS.set('inv_settings',settings); renderInventory(); renderTenants(); renderSettings();
+  items=[]; invData={}; settings={rate:24,months:36,unit:1000};
+  save(); LS.set('inv_settings',settings);
+  renderInventory(); renderTenants(); renderSettings();
 }
 
 // ─── MODAL ────────────────────────────────────────────────────
-function openModal(id) { document.getElementById(id).classList.add('open'); document.body.style.overflow='hidden'; }
-function closeModal(id){ document.getElementById(id).classList.remove('open'); document.body.style.overflow=''; }
+function openModal(id)  { document.getElementById(id).classList.add('open');    document.body.style.overflow='hidden'; }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); document.body.style.overflow=''; }
 document.querySelectorAll('.modal-backdrop').forEach(el =>
   el.addEventListener('click', e => { if(e.target===el) closeModal(el.id); })
 );
 
 // ─── INIT ─────────────────────────────────────────────────────
-items = LS.get('inv_items') || [];
 renderInventory();
 renderSettings();
 populateTenantSelector();
