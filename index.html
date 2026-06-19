@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hy">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -139,6 +139,16 @@
   --shadow:  var(--sh-md);
   --shadow-lg: var(--sh-lg);
   --sticky-h: 120px;
+
+  /* Motion — fast, functional, restrained (daily-use tool).
+     Easing reuses the strong curve already used by this file's
+     sheet/progress animations, applied consistently everywhere. */
+  --motion-snap:     120ms;
+  --motion-standard: 180ms;
+  --motion-enter:    240ms;
+  --ease-standard: cubic-bezier(.2, .8, .3, 1);
+  --ease-enter:    cubic-bezier(.16, 1, .3, 1);
+  --ease-exit:     cubic-bezier(.7, 0, .84, 0);
 }
 
 /* ── Reset ── */
@@ -150,7 +160,8 @@ body {
   color: var(--ink);
   font-size: 14px;
   line-height: 1.5;
-  min-height: 100vh;
+  height: 100vh;
+  display: flex;
   overscroll-behavior-y: contain;
   -webkit-font-smoothing: antialiased;
 }
@@ -815,8 +826,9 @@ canvas#reportChart { width: 100%; height: 130px; border-radius: 8px; }
 /* Icon buttons */
 .quick-btns {
   grid-column: 1 / -1;
-  display: flex; gap: 7px; justify-content: flex-end; align-items: stretch;
+  display: flex; gap: 5px; justify-content: flex-end; align-items: stretch;
 }
+.quick-btns > button { flex: 1 1 0; min-width: 0; max-width: 42px; }
 .icon-btn {
   width: 42px; padding: 7px; border-radius: 12px;
   border: 1px solid rgba(203,213,225,.9);
@@ -1517,6 +1529,12 @@ body.notification-open { overflow: hidden; touch-action: none; }
   .sort-bar         { grid-column: 1 / 7; min-width: 0; }
   .report-toggle    { grid-column: 7 / -1; min-width: 0; }
   .report-body      { grid-column: 7 / -1; min-width: 0; }
+  .wrap.reports-mode {
+    display: block;
+  }
+  .wrap.reports-mode .report-body {
+    grid-column: auto;
+  }
   #meterPanel       { grid-column: 1 / -1; }
   #list {
     grid-column: 1 / -1;
@@ -1557,6 +1575,71 @@ body.notification-open { overflow: hidden; touch-action: none; }
   .icon-btn, .send-btn { width: 40px; border-radius: 11px; }
   .msg-sheet { padding: 16px; border-radius: 20px; }
 }
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   MOTION CONSISTENCY LAYER  (added for UX polish)
+   The app already has good :active press feedback. This layer's
+   job is feel, not new motion: replace the weak default `ease`
+   and seven scattered durations with one strong custom curve and
+   the token scale. Same properties as before — only the timing
+   function and duration change. Honours the reduced-motion block.
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/* Replaces `transition: all` (wasteful) with explicit properties. */
+.chip {
+  transition:
+    background var(--motion-standard) var(--ease-standard),
+    border-color var(--motion-standard) var(--ease-standard),
+    color var(--motion-standard) var(--ease-standard),
+    transform var(--motion-snap) var(--ease-standard);
+}
+.export-btn {
+  transition:
+    background var(--motion-standard) var(--ease-standard),
+    border-color var(--motion-standard) var(--ease-standard),
+    color var(--motion-standard) var(--ease-standard),
+    box-shadow var(--motion-standard) var(--ease-standard),
+    transform var(--motion-snap) var(--ease-standard);
+}
+
+/* Strong, consistent easing for the high-traffic interactive
+   surfaces (previously default `ease`). Property lists preserved. */
+.header-add-btn {
+  transition:
+    background var(--motion-standard) var(--ease-standard),
+    border-color var(--motion-standard) var(--ease-standard),
+    transform var(--motion-snap) var(--ease-standard);
+}
+.stat-card {
+  transition: transform var(--motion-snap) var(--ease-standard);
+}
+.card {
+  transition:
+    transform var(--motion-standard) var(--ease-standard),
+    box-shadow var(--motion-standard) var(--ease-standard),
+    border-color var(--motion-standard) var(--ease-standard),
+    opacity var(--motion-enter) var(--ease-standard);
+}
+.action-btn {
+  transition:
+    transform var(--motion-snap) var(--ease-standard),
+    box-shadow var(--motion-snap) var(--ease-standard),
+    background var(--motion-standard) var(--ease-standard),
+    border-color var(--motion-standard) var(--ease-standard);
+}
+.icon-btn {
+  transition:
+    transform var(--motion-snap) var(--ease-standard),
+    box-shadow var(--motion-snap) var(--ease-standard),
+    background var(--motion-snap) var(--ease-standard);
+}
+.send-btn {
+  transition:
+    transform var(--motion-snap) var(--ease-standard),
+    box-shadow var(--motion-snap) var(--ease-standard);
+}
+
+/* Accessibility — neutralise all motion when the user opts out.
+   Placed last so its duration override wins the cascade. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: .01ms !important;
@@ -1564,10 +1647,779 @@ body.notification-open { overflow: hidden; touch-action: none; }
     transition-duration: .01ms !important;
   }
 }
+
+
+
+/* ━━ TENANTS MANAGEMENT SCREEN (Phase 2) ━━ */
+.tenants-screen {
+  position: fixed; inset: 0; z-index: 190;
+  background: var(--bg);
+  display: flex; flex-direction: column;
+  animation: fadeIn var(--motion-standard) var(--ease-enter);
+}
+.tenants-screen.hidden { display: none; }
+.tenants-topbar {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px var(--page-gutter);
+  background: linear-gradient(105deg, #08182b 0%, #0b2940 62%, #0f766e 140%);
+  color: #fff; box-shadow: var(--sh-sm);
+}
+.tenants-back {
+  width: 34px; height: 34px; flex-shrink: 0;
+  border: none; border-radius: 50%;
+  background: rgba(255,255,255,.12); color: #fff;
+  font-size: 22px; line-height: 1; cursor: pointer;
+  transition: transform var(--motion-snap) var(--ease-standard), background var(--motion-standard) var(--ease-standard);
+}
+.tenants-back:hover  { background: rgba(255,255,255,.22); }
+.tenants-back:active { transform: scale(.9); }
+.tenants-topbar-title { display: flex; flex-direction: column; line-height: 1.2; }
+.tenants-topbar-name  { font-weight: 900; letter-spacing: -.02em; font-size: 17px; }
+.tenants-topbar-sub   { font-size: 11px; opacity: .7; }
+.tenants-topbar-search { margin-left: auto; flex: 0 1 280px; }
+.tenants-topbar-search input {
+  width: 100%; padding: 9px 13px; font-size: 14px;
+  border: none; border-radius: var(--radius-sm);
+  background: rgba(255,255,255,.14); color: #fff; outline: none;
+}
+.tenants-topbar-search input::placeholder { color: rgba(255,255,255,.6); }
+.tenants-body {
+  flex: 1; overflow-y: auto; padding: var(--page-gutter);
+  display: grid; gap: 12px; align-content: start;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  max-width: var(--page-max); width: 100%; margin: 0 auto;
+}
+.tnt-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px; box-shadow: var(--sh-xs);
+  transition: transform var(--motion-standard) var(--ease-standard), box-shadow var(--motion-standard) var(--ease-standard), border-color var(--motion-standard) var(--ease-standard);
+}
+.tnt-card:hover { transform: translateY(-2px); box-shadow: var(--sh-sm); border-color: rgba(20,184,166,.3); }
+.tnt-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.tnt-office { font-size: 22px; font-weight: 900; letter-spacing: -.03em; color: var(--ink); }
+.tnt-name   { font-size: 14px; font-weight: 700; color: var(--ink); margin-top: 2px; }
+.tnt-pills  { display: flex; flex-wrap: wrap; gap: 5px; justify-content: flex-end; }
+.tnt-pill {
+  font-size: 10px; font-weight: 800; letter-spacing: .03em; text-transform: uppercase;
+  padding: 3px 8px; border-radius: 999px; white-space: nowrap;
+}
+.tnt-pill.active   { background: var(--paid-bg); color: var(--paid); }
+.tnt-pill.finished { background: var(--surface-3); color: var(--ink-3); }
+.tnt-pill.legal    { background: var(--prepaid-l); color: var(--prepaid); }
+.tnt-pill.physical { background: var(--blue-l); color: var(--blue); }
+.tnt-meta { margin-top: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; }
+.tnt-m { display: flex; flex-direction: column; }
+.tnt-k { font-size: 9px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-4); }
+.tnt-v { font-size: 13px; font-weight: 600; color: var(--ink); }
+.tnt-empty { grid-column: 1 / -1; text-align: center; color: var(--ink-3); padding: 40px 0; }
+@media (max-width: 560px) {
+  .tenants-topbar { flex-wrap: wrap; }
+  .tenants-topbar-search { flex: 1 1 100%; margin-left: 0; }
+  .tnt-meta { grid-template-columns: 1fr 1fr; }
+}
+
+/* Tenants card actions */
+.tnt-actions { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px; }
+.tnt-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  flex: 1 1 calc(50% - 4px);
+  padding: 9px 10px; font-size: 12.5px; font-weight: 800;
+  border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--surface-2); color: var(--forest); cursor: pointer;
+  transition: transform var(--motion-snap) var(--ease-standard), background var(--motion-standard) var(--ease-standard), border-color var(--motion-standard) var(--ease-standard);
+}
+.tnt-btn:hover  { border-color: var(--sage); background: rgba(20,184,166,.08); }
+.tnt-btn:active { transform: scale(.96); }
+
+/* ── Top Tab Navigation ──────────────────────────────────────── */
+.top-tabs {
+  display: flex; background: var(--surface);
+  border-bottom: 2px solid var(--border);
+  padding: 0 var(--page-gutter);
+  overflow-x: auto; scrollbar-width: none;
+  position: relative; z-index: 1;
+}
+.top-tabs::-webkit-scrollbar { display: none; }
+.top-tab {
+  flex: 1; min-width: 90px;
+  padding: 14px 10px 12px; font-size: 13px; font-weight: 700;
+  border: none; border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  background: transparent; color: var(--ink-3);
+  cursor: pointer; white-space: nowrap; letter-spacing: -.01em;
+  transition:
+    color var(--motion-standard) var(--ease-standard),
+    border-color var(--motion-standard) var(--ease-standard);
+}
+.top-tab:hover  { color: var(--ink); }
+.top-tab.active { color: var(--forest); border-bottom-color: var(--sage); font-weight: 800; }
+.top-tab:active { transform: scale(.97); }
+
+/* ── Tenants tab inline layout ──────────────────────────────── */
+.tenants-ctrl-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 0 8px;
+}
+.tenants-ctrl-count {
+  font-size: 12px; font-weight: 700; color: var(--ink-3); white-space: nowrap;
+}
+/* Override the flex-based assumptions from the old fixed-overlay era */
+#tenantsPanel .tenants-body {
+  flex: unset; overflow-y: visible; min-height: 200px;
+}
+
+/* Financial report hidden — nav lives in sidebar */
+/* reportToggle button replaced by sidebar nav item */
+#reportToggle { display: none !important; }
+/* reportBody hidden by default; shown via switchMainTab */
+#reportBody   { display: none; }
+
+/* ━━ Sidebar ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.sidebar {
+  width: 220px; flex-shrink: 0;
+  background: linear-gradient(160deg, #07172a 0%, #091f3a 55%, #0b1d33 100%);
+  display: flex; flex-direction: column;
+  height: 100vh; overflow-y: auto;
+  border-right: 1px solid rgba(45,212,191,.10);
+}
+.sidebar-brand {
+  padding: 20px 16px 18px;
+  display: flex; align-items: center; gap: 10px;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+  flex-shrink: 0;
+}
+.sidebar-logo-mark {
+  width: 36px; height: 36px; flex-shrink: 0;
+  background: linear-gradient(135deg, #14b8a6, #0891b2);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+}
+.sidebar-brand-name { color: #fff; font-weight: 700; font-size: 14px; line-height: 1.3; }
+.sidebar-brand-sub  { color: rgba(255,255,255,.45); font-size: 11px; margin-top: 1px; }
+.sidebar-nav {
+  flex: 1; padding: 14px 8px;
+  display: flex; flex-direction: column; gap: 3px;
+}
+.sidebar-item {
+  display: flex; align-items: center; gap: 11px;
+  padding: 11px 13px; border-radius: 10px;
+  border: none; background: transparent;
+  color: rgba(255,255,255,.5);
+  font-size: 13px; font-weight: 600; font-family: inherit;
+  cursor: pointer; text-align: left; width: 100%;
+  letter-spacing: -.01em;
+  transition:
+    background var(--motion-standard) var(--ease-standard),
+    color var(--motion-standard) var(--ease-standard),
+    transform var(--motion-snap) var(--ease-standard);
+}
+.sidebar-item:hover  { background: rgba(255,255,255,.07); color: rgba(255,255,255,.85); }
+.sidebar-item.active { background: rgba(20,184,166,.18); color: #fff; font-weight: 800; }
+.sidebar-item.active .sidebar-icon { color: var(--sage); }
+.sidebar-item:active { transform: scale(.97); }
+.sidebar-icon { font-size: 17px; width: 22px; text-align: center; flex-shrink: 0; }
+.sidebar-footer {
+  padding: 14px 16px; flex-shrink: 0;
+  border-top: 1px solid rgba(255,255,255,.07);
+  font-size: 11px; color: rgba(255,255,255,.35); line-height: 1.6;
+}
+
+/* ━━ Main area ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.main-area {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column;
+  height: 100vh; overflow-y: auto; overflow-x: hidden;
+}
+#rentStickyZone, #tenantsStickyZone {
+  position: sticky; top: 0; z-index: 10;
+}
+
+/* ━━ Mobile: sidebar → bottom tab bar ━━━━━━━━━━━━━━━━━━━━━━━━━ */
+@media (max-width: 768px) {
+  body { flex-direction: column; }
+  .sidebar {
+    order: 2; width: 100%; height: auto;
+    flex-direction: row;
+    border-right: none;
+    border-top: 1px solid rgba(45,212,191,.15);
+    overflow-y: visible; overflow-x: auto;
+  }
+  .sidebar-brand, .sidebar-footer { display: none; }
+  .sidebar-nav {
+    flex-direction: row; flex: 1;
+    padding: 4px 8px;
+    padding-bottom: max(4px, env(safe-area-inset-bottom));
+    gap: 2px;
+  }
+  .sidebar-item {
+    flex: 1; flex-direction: column;
+    gap: 2px; padding: 7px 4px;
+    font-size: 10px; border-radius: 8px;
+    justify-content: center; text-align: center;
+  }
+  .sidebar-icon { font-size: 20px; width: auto; }
+  .main-area {
+    order: 1;
+    height: calc(100vh - 64px);
+  }
+}
+
+/* ━━ Reports / CRM Tab ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+#reportBody {
+  padding: var(--page-gutter);
+  max-width: var(--page-max);
+  margin: 0 auto; width: 100%;
+  font-size: 14px;
+}
+/* KPI summary row */
+.rpt-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px; margin-bottom: 18px;
+}
+.rpt-kpi {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px 14px;
+  box-shadow: var(--sh-xs);
+}
+.rpt-kpi-val   { font-size: 20px; font-weight: 900; letter-spacing:-.03em; color: var(--ink); line-height:1.1; }
+.rpt-kpi-label { font-size: 10px; font-weight: 800; letter-spacing:.05em; text-transform:uppercase; color: var(--ink-4); margin-top:5px; }
+.rpt-kpi-sub   { font-size: 11px; color: var(--ink-3); margin-top:2px; }
+.rpt-kpi-green .rpt-kpi-val { color: var(--paid); }
+.rpt-kpi-red   .rpt-kpi-val { color: var(--red); }
+.rpt-kpi-amber .rpt-kpi-val { color: var(--amber); }
+/* Controls bar */
+.rpt-controls {
+  display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 12px 14px; margin-bottom: 14px;
+}
+.rpt-filter-bar { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; }
+.rpt-pill {
+  padding: 5px 13px; border-radius: 999px;
+  border: 1.5px solid var(--border); background: var(--surface-2);
+  font-size: 12px; font-weight: 700; color: var(--ink-2); cursor: pointer;
+  transition: all var(--motion-snap) var(--ease-standard);
+}
+.rpt-pill.active { background: var(--forest); border-color: var(--forest); color:#fff; }
+.rpt-pill:active { transform: scale(.96); }
+.rpt-search-sort { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+.rpt-search {
+  padding: 8px 12px; border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm); font-size: 13px;
+  background: var(--surface-2); color: var(--ink);
+  outline: none; width: 210px;
+}
+.rpt-search:focus { border-color: var(--sage); }
+.rpt-sort-sel {
+  padding: 8px 10px; border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm); font-size: 13px; font-family: inherit;
+  background: var(--surface-2); color: var(--ink); cursor: pointer; outline: none;
+}
+/* Table wrapper */
+#rptTableWrap { overflow-x: auto; border-radius: var(--radius); margin-bottom: 14px; }
+.rpt-table {
+  width: 100%; border-collapse: collapse;
+  background: var(--surface); border: 1px solid var(--border);
+  font-size: 13px; min-width: 820px;
+}
+.rpt-table thead { position: sticky; top: 0; z-index: 2; }
+.rpt-table th {
+  padding: 10px 12px; text-align: left;
+  font-size: 10px; font-weight: 900; letter-spacing:.05em; text-transform: uppercase;
+  color: var(--ink-3); background: var(--surface-2);
+  border-bottom: 2px solid var(--border); white-space: nowrap;
+}
+.rpt-sortable { cursor: pointer; user-select: none; }
+.rpt-sortable:hover { color: var(--ink); }
+.rpt-th-active { color: var(--forest); }
+.rpt-table td {
+  padding: 10px 12px; border-bottom: 1px solid var(--surface-3);
+  vertical-align: middle; white-space: nowrap;
+}
+.rpt-table tbody tr:hover { background: rgba(20,184,166,.04); }
+.rpt-num    { text-align: right; font-variant-numeric: tabular-nums; }
+.rpt-strong { font-weight: 800; }
+.rpt-apt    { font-weight: 900; font-size: 15px; letter-spacing:-.02em; }
+.rpt-tname  { font-weight: 700; }
+.rpt-entity {
+  display: inline-block; font-size: 9px; font-weight: 800;
+  letter-spacing:.04em; text-transform: uppercase;
+  padding: 1px 6px; border-radius: 999px; margin-top: 2px;
+}
+.rpt-entity-legal { background: var(--prepaid-l); color: var(--prepaid); }
+.rpt-entity-phys  { background: var(--blue-l);    color: var(--blue); }
+/* Status badges */
+.rpt-badge {
+  display: inline-block; padding: 3px 8px; border-radius: 999px;
+  font-size: 10px; font-weight: 800; letter-spacing:.03em;
+}
+.rpt-paid    { background: var(--paid-bg);   color: var(--paid); }
+.rpt-unpaid  { background: var(--unpaid-l);  color: var(--unpaid); }
+.rpt-deposit { background: var(--deposit-l); color: var(--deposit); }
+.rpt-prepaid { background: var(--prepaid-l); color: var(--prepaid); }
+.rpt-partial { background: var(--amber-l);   color: var(--amber); }
+/* Footer */
+.rpt-table tfoot td {
+  padding: 10px 12px; background: var(--surface-3);
+  border-top: 2px solid var(--border);
+}
+.rpt-foot-lbl {
+  font-size: 11px; font-weight: 800; color: var(--ink-3);
+  text-transform: uppercase; letter-spacing:.04em;
+}
+/* Actions */
+.rpt-actions { display: flex; gap: 8px; padding-bottom: 24px; }
+/* Empty state */
+.rpt-empty { text-align:center; padding: 40px; color: var(--ink-3); }
+/* Mobile */
+@media (max-width: 768px) {
+  .rpt-kpi-row  { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .rpt-controls { flex-direction: column; align-items: stretch; }
+  .rpt-search-sort { flex-direction: column; }
+  .rpt-search   { width: 100%; }
+}
+
+/* Contract wizard identity section */
+.contract-grid .field-wide { grid-column: 1 / -1; }
+#docIdentitySection .contract-grid { margin-top: 8px; }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   2026 Visual Refresh — app shell
+   Keeps the existing behavior and JS hooks intact.
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+:root {
+  --bg: #f4f7fb;
+  --surface: #ffffff;
+  --surface-2: #f8fafc;
+  --surface-3: #eef4f8;
+  --border: #dfe7ef;
+  --border-2: #cad7e3;
+  --ink: #142033;
+  --ink-2: #526173;
+  --ink-3: #8794a6;
+  --forest: #0f2337;
+  --forest-2: #17324b;
+  --sage: #0f9f8d;
+  --sage-l: #2ec4b6;
+  --champagne: #3b82f6;
+  --champagne-l: #93c5fd;
+  --header-h: 72px;
+  --page-max: 1220px;
+  --radius-sm: 12px;
+  --radius: 14px;
+  --radius-lg: 18px;
+  --sh-xs: 0 1px 2px rgba(16,24,40,.04);
+  --sh-sm: 0 8px 24px rgba(16,24,40,.07);
+  --sh-md: 0 16px 40px rgba(16,24,40,.09);
+  --sh-lg: 0 24px 70px rgba(16,24,40,.14);
+}
+
+html { background: #edf2f7; }
+body {
+  background:
+    radial-gradient(circle at top left, rgba(15,159,141,.10), transparent 32vw),
+    linear-gradient(135deg, #f7fafc 0%, #eef4f8 100%);
+  color: var(--ink);
+}
+
+.sidebar {
+  width: 248px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.98), rgba(248,250,252,.96)),
+    #fff;
+  border-right: 1px solid rgba(202,215,227,.9);
+  box-shadow: 8px 0 30px rgba(15,35,55,.05);
+  padding: 14px 12px;
+}
+.sidebar-brand {
+  padding: 10px 10px 18px;
+  border-bottom: 1px solid rgba(202,215,227,.7);
+  gap: 12px;
+}
+.sidebar-logo-mark {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #0f9f8d, #2563eb);
+  color: transparent;
+  position: relative;
+  box-shadow: 0 12px 28px rgba(15,159,141,.24);
+}
+.sidebar-logo-mark::before,
+.sidebar-logo-mark::after {
+  content: '';
+  position: absolute;
+  background: rgba(255,255,255,.95);
+  border-radius: 3px;
+}
+.sidebar-logo-mark::before {
+  left: 12px; right: 12px; top: 9px; bottom: 9px;
+}
+.sidebar-logo-mark::after {
+  width: 4px; height: 4px; left: 19px; top: 15px;
+  box-shadow: 0 8px 0 rgba(15,159,141,.92);
+}
+.sidebar-brand-name {
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 850;
+  letter-spacing: 0;
+}
+.sidebar-brand-sub {
+  color: var(--ink-3);
+  font-size: 11px;
+  font-weight: 650;
+  margin-top: 2px;
+}
+.sidebar-nav {
+  padding: 18px 0;
+  gap: 6px;
+}
+.sidebar-item {
+  min-height: 46px;
+  padding: 0 13px;
+  border-radius: 12px;
+  color: #667386;
+  font-size: 13px;
+  font-weight: 750;
+  letter-spacing: 0;
+}
+.sidebar-item:hover {
+  background: #f1f6fa;
+  color: var(--ink);
+}
+.sidebar-item:focus { outline: none; }
+.sidebar-item:focus-visible {
+  box-shadow: inset 0 0 0 2px rgba(15,159,141,.36);
+}
+.sidebar-item.active {
+  background: linear-gradient(135deg, #e9fbf8, #edf5ff);
+  color: #0f766e;
+  font-weight: 850;
+  box-shadow: inset 0 0 0 1px rgba(15,159,141,.16), 0 8px 20px rgba(15,159,141,.10);
+}
+.sidebar-item.active::before {
+  content: '';
+  width: 4px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--sage);
+  margin-left: -5px;
+}
+.sidebar-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #edf3f8;
+  color: transparent;
+  position: relative;
+  font-size: 0;
+}
+.sidebar-icon::before {
+  color: #65758a;
+  font-size: 15px;
+  line-height: 1;
+}
+.sidebar-item.active .sidebar-icon {
+  background: #fff;
+  color: transparent;
+  box-shadow: 0 6px 16px rgba(15,35,55,.08);
+}
+.sidebar-item.active .sidebar-icon::before { color: var(--sage); }
+.sidebar-item[data-maintab="rent"] .sidebar-icon::before { content: '$'; font-weight: 900; }
+.sidebar-item[data-maintab="utilities"] .sidebar-icon::before { content: 'kW'; font-size: 11px; font-weight: 900; }
+.sidebar-item[data-maintab="tenants"] .sidebar-icon::before { content: 'ID'; font-size: 11px; font-weight: 900; }
+.sidebar-item[data-maintab="reports"] .sidebar-icon::before { content: '%'; font-weight: 900; }
+.sidebar-footer {
+  padding: 14px 10px 6px;
+  border-top: 1px solid rgba(202,215,227,.7);
+  color: var(--ink-3);
+}
+
+.main-area {
+  background: transparent;
+}
+.header {
+  z-index: 12;
+  background: rgba(255,255,255,.84);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  box-shadow: 0 1px 0 rgba(202,215,227,.85);
+}
+.header::after { display: none; }
+.header-inner {
+  max-width: none;
+  padding-left: clamp(18px, 2.6vw, 32px);
+  padding-right: clamp(18px, 2.6vw, 32px);
+}
+.header-logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid rgba(202,215,227,.95);
+  box-shadow: 0 10px 24px rgba(15,35,55,.10);
+}
+.header-title {
+  color: var(--ink);
+  font-size: 17px;
+  letter-spacing: 0;
+}
+.header-sub {
+  color: var(--ink-3);
+  opacity: 1;
+  letter-spacing: .03em;
+}
+.header-add-btn,
+.sync-pill {
+  min-height: 38px;
+  border-radius: 12px;
+  border: 1px solid rgba(202,215,227,.95);
+  background: #fff;
+  color: var(--ink);
+  box-shadow: var(--sh-xs);
+}
+.header-add-btn:hover,
+.sync-pill:hover {
+  background: #f8fbfd;
+  border-color: rgba(15,159,141,.42);
+}
+.sync-pill.ok {
+  background: #ecfdf5;
+  border-color: #bbf7d0;
+  color: #047857;
+}
+.sync-pill.err {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+.sticky-zone {
+  z-index: 11;
+  background: rgba(244,247,251,.82);
+  border-bottom: 1px solid rgba(202,215,227,.78);
+  box-shadow: 0 10px 26px rgba(16,24,40,.04);
+}
+.sticky-inner {
+  max-width: none;
+  padding-left: clamp(18px, 2.6vw, 32px);
+  padding-right: clamp(18px, 2.6vw, 32px);
+}
+.wrap,
+#reportBody {
+  max-width: none;
+  padding-left: clamp(18px, 2.6vw, 32px);
+  padding-right: clamp(18px, 2.6vw, 32px);
+}
+#reportBody {
+  width: min(1320px, calc(100% - 32px));
+  max-width: 1320px;
+  margin: 24px auto 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+#rptTableWrap {
+  overflow-x: auto;
+}
+.rpt-table {
+  min-width: 100%;
+}
+@media (min-width: 900px) {
+  #rptTableWrap {
+    overflow-x: hidden;
+  }
+  .rpt-table {
+    table-layout: fixed;
+  }
+  .rpt-table th,
+  .rpt-table td {
+    padding-left: 9px;
+    padding-right: 9px;
+  }
+  .rpt-table th:nth-child(1), .rpt-table td:nth-child(1) { width: 8%; }
+  .rpt-table th:nth-child(2), .rpt-table td:nth-child(2) { width: 25%; }
+  .rpt-table th:nth-child(3), .rpt-table td:nth-child(3) { width: 10%; }
+  .rpt-table th:nth-child(4), .rpt-table td:nth-child(4) { width: 10%; }
+  .rpt-table th:nth-child(5), .rpt-table td:nth-child(5) { width: 11%; }
+  .rpt-table th:nth-child(6), .rpt-table td:nth-child(6) { width: 9%; }
+  .rpt-table th:nth-child(7), .rpt-table td:nth-child(7) { width: 10%; }
+  .rpt-table th:nth-child(8), .rpt-table td:nth-child(8) { width: 11%; }
+  .rpt-table th:nth-child(9), .rpt-table td:nth-child(9) { width: 9%; }
+  .rpt-table th:nth-child(10), .rpt-table td:nth-child(10) { width: 10%; }
+  .rpt-tname {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+.month-row,
+.search-wrap input,
+.sort-bar,
+.stat-card,
+.prog-panel,
+.chart-panel,
+.report-body,
+.card,
+.tenant-card,
+.tnt-card,
+.rpt-card,
+.rpt-kpi {
+  border-color: rgba(202,215,227,.85);
+  box-shadow: 0 10px 28px rgba(16,24,40,.06);
+}
+.month-row,
+.search-wrap input,
+.sort-bar {
+  border-radius: 14px;
+}
+.chip {
+  border-color: rgba(202,215,227,.9);
+  box-shadow: none;
+}
+.chip.active {
+  background: #142033;
+  border-color: #142033;
+  box-shadow: 0 10px 24px rgba(20,32,51,.16);
+}
+.chip.active::after { display: none; }
+
+@media (max-width: 768px) {
+  .sidebar {
+    width: 100%;
+    height: calc(65px + env(safe-area-inset-bottom));
+    flex-direction: row;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 80;
+    padding: 6px 8px max(6px, env(safe-area-inset-bottom));
+    background: rgba(255,255,255,.94);
+    backdrop-filter: blur(18px) saturate(160%);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+    box-shadow: 0 -10px 28px rgba(15,35,55,.10);
+  }
+  .main-area {
+    height: 100vh;
+    padding-bottom: calc(76px + env(safe-area-inset-bottom));
+  }
+  #rentStickyZone, #tenantsStickyZone {
+    z-index: 30;
+  }
+  .sidebar-nav { padding: 0; gap: 4px; }
+  .sidebar-item {
+    min-height: 52px;
+    border-radius: 12px;
+    font-size: 10px;
+  }
+  .sidebar-item.active::before { display: none; }
+  .sidebar-icon {
+    width: 26px;
+    height: 26px;
+    border-radius: 9px;
+  }
+  .header-inner,
+  .sticky-inner,
+  .wrap,
+  #reportBody {
+    padding-left: max(14px, env(safe-area-inset-left));
+    padding-right: max(14px, env(safe-area-inset-right));
+  }
+  #reportBody {
+    width: 100%;
+    max-width: none;
+    margin-top: 14px;
+  }
+}
+
+
+/* Smooth payments scrolling tune-up */
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+}
+body {
+  min-height: 100dvh;
+  overscroll-behavior: none;
+}
+.main-area {
+  height: 100dvh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  scroll-behavior: smooth;
+  scroll-padding-top: calc(var(--sticky-h) + 12px);
+}
+#rentStickyZone {
+  top: 0;
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+}
+#list {
+  padding-bottom: calc(28px + env(safe-area-inset-bottom));
+}
+.card {
+  content-visibility: auto;
+  contain-intrinsic-size: 264px;
+}
+@media (max-width: 768px) {
+  body {
+    min-height: 100dvh;
+  }
+  .main-area {
+    height: 100dvh;
+    padding-bottom: calc(86px + env(safe-area-inset-bottom));
+    scroll-padding-bottom: calc(96px + env(safe-area-inset-bottom));
+  }
+  #rentStickyZone .sticky-inner {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+  .wrap {
+    padding-top: 10px;
+    padding-bottom: calc(92px + env(safe-area-inset-bottom));
+  }
+  #list {
+    padding-bottom: calc(100px + env(safe-area-inset-bottom));
+  }
+}
+
 </style>
 </head>
 <body>
 
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <div class="sidebar-logo-mark">🏢</div>
+    <div>
+      <div class="sidebar-brand-name">Plus One</div>
+      <div class="sidebar-brand-sub">Law Group · Offices</div>
+    </div>
+  </div>
+  <nav class="sidebar-nav" role="tablist">
+    <button class="sidebar-item active" data-maintab="rent"      onclick="switchMainTab('rent')"      role="tab" aria-selected="true">
+      <span class="sidebar-icon">🏠</span><span>Rent Payments</span>
+    </button>
+    <button class="sidebar-item" data-maintab="utilities" onclick="switchMainTab('utilities')" role="tab" aria-selected="false">
+      <span class="sidebar-icon">⚡</span><span>Utilities</span>
+    </button>
+    <button class="sidebar-item" data-maintab="tenants"   onclick="switchMainTab('tenants')"   role="tab" aria-selected="false">
+      <span class="sidebar-icon">👥</span><span>Tenants</span>
+    </button>
+    <button class="sidebar-item" data-maintab="reports" onclick="switchMainTab('reports')" role="tab" aria-selected="false">
+      <span class="sidebar-icon">📊</span><span>Reports</span>
+    </button>
+  </nav>
+  <div class="sidebar-footer" id="sidebarSync"></div>
+</aside>
+<div class="main-area" id="mainArea">
 <!-- Offline banner -->
 <div id="offlineBanner">📵 Offline · showing cached data</div>
 
@@ -1589,7 +2441,7 @@ body.notification-open { overflow: hidden; touch-action: none; }
 </div>
 
 <!-- Sticky controls -->
-<div class="sticky-zone">
+<div class="sticky-zone" id="rentStickyZone">
   <div class="sticky-inner">
   <div class="control-row">
   <div class="month-row">
@@ -1605,7 +2457,6 @@ body.notification-open { overflow: hidden; touch-action: none; }
   <div class="filter-chips">
     <button class="chip active" data-tab="all">All</button>
     <button class="chip" data-tab="deposit">⟳ Deposit</button>
-    <button class="chip" data-tab="meter">⚡ Electricity</button>
     <button class="chip paid-toggle-chip" id="paidToggleBtn" onclick="toggleShowPaid()" style="display:none">
       <span id="paidToggleIcon"></span>
       <span id="paidToggleLabel">Show Paid</span>
@@ -1667,7 +2518,7 @@ body.notification-open { overflow: hidden; touch-action: none; }
     </div>
     <div class="electricity-summary">
       <div>
-        <div class="electricity-summary-label">Calculated total</div>
+        <div class="electricity-summary-label">Not yet collected</div>
         <div class="electricity-summary-value" id="meterSummaryTotal">0 ֏</div>
       </div>
       <div class="electricity-summary-meta" id="meterSummaryMeta">0 readings</div>
@@ -1736,6 +2587,16 @@ body.notification-open { overflow: hidden; touch-action: none; }
       <div class="field"><label>Contract start</label><input type="date" id="eStartDate"></div>
       <div class="field"><label>Contract end</label><input type="date" id="eEndDate"></div>
       <div class="field"><label>Payment day</label><input type="number" id="ePaymentDate" min="1" max="31"></div>
+      <div class="field"><label>First payment date</label><input type="date" id="eFirstPaymentDate"></div>
+      <div class="field"><label>Deposit payment date</label><input type="date" id="eDepositDate"></div>
+      <div class="field"><label>City</label><input type="text" id="eCity" autocomplete="off"></div>
+      <div class="field"><label>Property address</label><input type="text" id="ePropertyAddress" autocomplete="off"></div>
+      <div class="field"><label>Floor</label><input type="text" id="eFloor" autocomplete="off"></div>
+      <div class="field"><label>Wing</label><input type="text" id="eWing" autocomplete="off"></div>
+      <div class="field"><label>Unit</label><input type="text" id="eUnitDescription" autocomplete="off"></div>
+      <div class="field"><label>Purpose</label><input type="text" id="ePurpose" autocomplete="off"></div>
+      <div class="field"><label>Tenant bank</label><input type="text" id="eTenantBank" autocomplete="off"></div>
+      <div class="field"><label>Bank account</label><input type="text" id="eTenantBankAccount" autocomplete="off"></div>
     </div>
     <div class="modal-btns">
       <button class="modal-cancel" onclick="closeModal()">Cancel</button>
@@ -1815,10 +2676,63 @@ body.notification-open { overflow: hidden; touch-action: none; }
     </div>
 
     <div class="contract-section">
+      <div class="contract-section-title">Operational</div>
+      <div class="contract-grid">
+        <div class="field"><label>Contact channel</label>
+          <select id="docCh">
+            <option value="wa">WhatsApp</option>
+            <option value="tg">Telegram</option>
+            <option value="sms">SMS</option>
+          </select>
+        </div>
+        <div class="field"><label>Internet</label>
+          <select id="docInternet">
+            <option value="no">No</option>
+            <option value="yes">Yes</option>
+          </select>
+        </div>
+        <div class="field"><label>Does not pay previous utility</label>
+          <select id="docSkipPrevUtil">
+            <option value="no">No</option>
+            <option value="yes">Yes</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="contract-section" id="docIdentitySection">
+      <div class="contract-section-title">Tenant identity</div>
+
+      <!-- Physical person -->
+      <div id="docPhysicalBlock">
+        <div class="contract-grid">
+          <div class="field"><label>Passport number</label><input type="text" id="docPassport" autocomplete="off"></div>
+          <div class="field"><label>Issued from</label><input type="text" id="docIssuedFrom" autocomplete="off"></div>
+          <div class="field"><label>Valid until</label><input type="date" id="docValidUntil"></div>
+        </div>
+      </div>
+
+      <!-- Legal entity -->
+      <div id="docLegalBlock" style="display:none">
+        <div class="contract-grid">
+          <div class="field"><label>HVHH (Tax ID)</label><input type="text" id="docHvhh" autocomplete="off"></div>
+          <div class="field"><label>Registration number</label><input type="text" id="docRegistrationNumber" autocomplete="off"></div>
+          <div class="field field-wide"><label>Legal address</label><input type="text" id="docLegalAddress" autocomplete="off"></div>
+          <div class="field"><label>Director name</label><input type="text" id="docCeoName" autocomplete="off"></div>
+          <div class="field"><label>Director passport</label><input type="text" id="docCeoPassport" autocomplete="off"></div>
+          <div class="field field-wide"><label>Director address</label><input type="text" id="docCeoAddress" autocomplete="off"></div>
+          <div class="field"><label>Director passport issued from</label><input type="text" id="docCeoIssuedFrom" autocomplete="off"></div>
+          <div class="field"><label>Director passport valid until</label><input type="date" id="docCeoValidUntil"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="contract-section">
       <div class="contract-section-title">Property and terms</div>
       <div class="contract-grid">
         <div class="field"><label>Property address</label><input type="text" id="docPropertyAddress" value="ՀՀ Երևան, Կենտրոն վարչ. շրջան, Արշակունյաց պող. թիվ 4"></div>
-        <div class="field"><label>Floor</label><input type="text" id="docFloor" value="11-րդ հարկ"></div>
+        <div class="field"><label>Floor designation</label><input type="text" id="docFloor" value="11-րդ"></div>
+        <div class="field"><label>Wing</label><input type="text" id="docWing" value="Աջ թև"></div>
         <div class="field"><label>Unit description</label><input type="text" id="docUnit"></div>
         <div class="field"><label>Purpose</label><input type="text" id="docPurpose" value="գրասենյակ"></div>
         <div class="field"><label>Term start</label><input type="date" id="docTermStart" onchange="updateDocPreview()"></div>
@@ -1827,6 +2741,10 @@ body.notification-open { overflow: hidden; touch-action: none; }
         <div class="field"><label>Payment day</label><input type="number" id="docPaymentDay" min="1" max="31"></div>
         <div class="field"><label>First payment date</label><input type="date" id="docFirstPaymentDate"></div>
         <div class="field"><label>Deposit payment date</label><input type="date" id="docDepositDate"></div>
+        <div class="field"><label>Tenant address</label><input type="text" id="docTenantAddress"></div>
+        <div class="field"><label>Tenant phone (+374)</label><input type="tel" id="docPhone" placeholder="+374 91 123456" inputmode="tel" onblur="normalizeDocPhone()" onchange="updateDocPreview()"></div>
+        <div class="field"><label>Tenant bank</label><input type="text" id="docTenantBank"></div>
+        <div class="field"><label>Tenant bank account</label><input type="text" id="docTenantBankAccount"></div>
       </div>
     </div>
 
@@ -1834,7 +2752,10 @@ body.notification-open { overflow: hidden; touch-action: none; }
       <div class="contract-section-title">Extension terms</div>
       <div class="contract-grid">
         <div class="field"><label>Extension number</label><input type="number" id="docExtensionNumber" min="1" value="1"></div>
+        <div class="field"><label>Original contract date</label><input type="date" id="docOriginalContractDate"></div>
         <div class="field"><label>Extension period text</label><input type="text" id="docExtensionPeriod" value="մեկ (1) ամսով"></div>
+        <div class="field"><label>Special period start</label><input type="date" id="docSpecialPeriodStart"></div>
+        <div class="field"><label>Special period end</label><input type="date" id="docSpecialPeriodEnd"></div>
         <div class="field"><label>Special rent amount (optional)</label><input type="number" id="docSpecialRent"></div>
         <div class="field"><label>Special payment deadline</label><input type="date" id="docSpecialDeadline"></div>
       </div>
@@ -1867,16 +2788,35 @@ body.notification-open { overflow: hidden; touch-action: none; }
   </div>
 </div>
 
+<input type="file" id="tenantFileInput" hidden>
+
+<!-- ─── TENANTS TAB: controls bar ─── -->
+<div class="sticky-zone" id="tenantsStickyZone" style="display:none">
+  <div class="sticky-inner">
+    <div class="tenants-ctrl-row">
+      <span class="tenants-ctrl-count" id="tenantsCount"></span>
+      <div class="search-wrap">
+        <input type="text" id="tenantsSearch" placeholder="🔍 Office, name, phone..." autocomplete="off" autocorrect="off">
+      </div>
+    </div>
+  </div>
+</div>
+<!-- ─── TENANTS TAB: cards panel ─── -->
+<div id="tenantsPanel" style="display:none">
+  <div class="tenants-body" id="tenantsBody"></div>
+</div>
+</div><!-- /main-area -->
+
 <script>
 /* ═══════════════════════════════════════════════
    CONSTANTS & STATE
 ═══════════════════════════════════════════════ */
-var API = 'https://script.google.com/macros/s/AKfycbyb0lCMNScmwJ8SYBg-UVv8HszqwGwH01yv4RFxzsjB3dQCh8qExtfQFCggTXfsWELc/exec';
-var CONTRACT_API = 'https://script.google.com/macros/s/AKfycby3kerA22ijBto3TMYrbhBWkMQOb3lPe440g5lzkie4WiegLe0oo4uk9M4mQqg1FYmp/exec';
+var API = 'https://script.google.com/macros/s/AKfycbzkguhBn7g3gZO0tqGZYmS5gDBc48kBkgt6upEuPH2uaLzj0ct1YS_x_QGfBKdtAbDT/exec';
+var uploadTenantApt = '';
 
 /* Race fetch (no credentials) against JSONP — fastest winner used.
    fetch omits cookies so Google won't redirect the owner's account to auth. */
-function jsonp(url) {
+function jsonp(url, timeoutMs) {
   return new Promise(function(resolve, reject) {
     var settled = false;
     var pending = 2;
@@ -1886,7 +2826,7 @@ function jsonp(url) {
 
     // ── fetch branch (no credentials) ──
     var ctrl = window.AbortController ? new AbortController() : null;
-    var ft = ctrl ? setTimeout(function() { ctrl.abort(); }, 8000) : null;
+    var ft = ctrl ? setTimeout(function() { ctrl.abort(); }, timeoutMs || 8000) : null;
     fetch(url, { credentials: 'omit', mode: 'cors', signal: ctrl ? ctrl.signal : undefined })
       .then(function(r) { clearTimeout(ft); if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
       .then(win).catch(function(e) { clearTimeout(ft); fail(e); });
@@ -1894,7 +2834,7 @@ function jsonp(url) {
     // ── JSONP branch ──
     var cbName = '_cb' + Date.now() + Math.floor(Math.random() * 1e6);
     var script = document.createElement('script');
-    var jt = setTimeout(function() { cleanup(); fail(new Error('JSONP timeout')); }, 12000);
+    var jt = setTimeout(function() { cleanup(); fail(new Error('JSONP timeout')); }, timeoutMs || 12000);
     function cleanup() { clearTimeout(jt); delete window[cbName]; if (script.parentNode) script.parentNode.removeChild(script); }
     window[cbName] = function(data) { cleanup(); win(data); };
     script.onerror  = function() { cleanup(); fail(new Error('JSONP error')); };
@@ -1903,11 +2843,15 @@ function jsonp(url) {
   });
 }
 
-function jsonpRetry(url, attempts) {
+function jsonpRetry(url, attempts, timeoutMs) {
   attempts = attempts || 2;
-  return jsonp(url).catch(function(err) {
+  return jsonp(url, timeoutMs).catch(function(err) {
     if (attempts <= 1) throw err;
-    return jsonpRetry(url + (url.indexOf('?') === -1 ? '?' : '&') + '_retry=' + Date.now(), attempts - 1);
+    return jsonpRetry(
+      url + (url.indexOf('?') === -1 ? '?' : '&') + '_retry=' + Date.now(),
+      attempts - 1,
+      timeoutMs
+    );
   });
 }
 
@@ -1955,6 +2899,7 @@ var elecMap = {};
 var st = {};
 var paymentsData = {};
 var curTab = 'all';
+var mainTab = 'rent';
 var editingApt = null;
 var modalMode = 'edit';
 var availableMonths = [];
@@ -1965,7 +2910,11 @@ var lastSyncTime = null;
 var syncInFlight = false;
 var lastSyncError = '';
 var hasInitialData = false;
-var reportOpen = false;
+var reportOpen   = false;
+var reportFilter = 'all';
+var reportSort   = 'apt';
+var reportSortDir = 1;
+var reportSearch = '';
 var longPressTimer = null;
 var showPaid = false;  // hide fully-paid cards by default
 var meterShowPaid = false;      // electricity tab: hide paid offices by default
@@ -2496,36 +3445,151 @@ function toggleReport() {
   reportOpen = !reportOpen;
   document.getElementById('reportBody').classList.toggle('open', reportOpen);
   document.getElementById('reportArrow').textContent = reportOpen ? '▴' : '▾';
-  if (reportOpen) renderReportBody();
+  if (reportOpen && mainTab === 'reports') renderReportBody();
 }
 
 function renderReportBody() {
-  var f = calcFinancials();
+  if (mainTab !== 'reports') return;
+  var f   = calcFinancials();
   var body = document.getElementById('reportBody');
-  function row(label, val, cls) {
-    return '<div class="report-row"><span class="report-row-label">' + label + '</span>' +
-           '<span class="report-row-val ' + (cls||'') + '">' + val + '</span></div>';
+  var totalDue  = f.rentTotal + f.elecTotal + f.netTotal;
+  var totalPaid = f.rentCollected + f.elecCollected + f.netCollected;
+  var outstanding = totalDue - totalPaid;
+  var rate = totalDue > 0 ? Math.round(totalPaid / totalDue * 100) : 0;
+  function kpi(val, label, sub, cls) {
+    return '<div class="rpt-kpi ' + (cls||'') + '">' +
+      '<div class="rpt-kpi-val">' + val + '</div>' +
+      '<div class="rpt-kpi-label">' + label + '</div>' +
+      (sub ? '<div class="rpt-kpi-sub">' + sub + '</div>' : '') +
+      '</div>';
   }
-  body.innerHTML =
-    '<div class="report-section">Payments</div>' +
-    row('🏢 Rent collected', fmt(f.rentCollected) + ' ֏', 'c-green') +
-    row('🏢 Rent remaining', fmt(f.rentTotal - f.rentCollected) + ' ֏', 'c-red') +
-    row('⚡ Electricity collected', fmt(f.elecCollected) + ' ֏', 'c-green') +
-    row('⚡ Electricity remaining', fmt(f.elecTotal - f.elecCollected) + ' ֏', 'c-red') +
-    row('📶 Internet collected', fmt(f.netCollected) + ' ֏', 'c-green') +
-    row('📶 Internet remaining', fmt(f.netTotal - f.netCollected) + ' ֏', 'c-red') +
-    '<div class="report-section">Summary</div>' +
-    row('💰 Total collected', fmt(f.totalCollected) + ' ֏', 'c-green') +
-    row('💰 Total remaining', fmt(f.totalDue - f.totalCollected) + ' ֏', 'c-red') +
-    row('⟳ Deposit ({0})'.replace('{0}', f.depCount), fmt(f.depAmt) + ' ֏', 'c-amber') +
-    '<div class="report-section">Top unpaid</div>' +
-    f.unpaidList.slice(0, 5).map(function(t) {
-      return row('Office ' + t.apt + ' · ' + t.name, fmt(t.rent) + ' ֏', 'c-red');
-    }).join('') +
-    '<div class="export-row">' +
-      '<button class="export-btn primary" onclick="exportCSV()">📥 CSV</button>' +
-      '<button class="export-btn" onclick="shareReport()">📤 Share</button>' +
-    '</div>';
+  var kpiRow = '<div class="rpt-kpi-row">' +
+    kpi(fmt(totalDue) + ' \u058f',    'Total Due',          curMonth, '') +
+    kpi(fmt(totalPaid) + ' \u058f',   'Collected',          tenants.length + ' offices', 'rpt-kpi-green') +
+    kpi(fmt(outstanding) + ' \u058f', 'Outstanding',        f.unpaidList.length + ' unpaid', outstanding > 0 ? 'rpt-kpi-red' : 'rpt-kpi-green') +
+    kpi(rate + '%',                   'Collection Rate',    '', rate >= 80 ? 'rpt-kpi-green' : rate >= 50 ? 'rpt-kpi-amber' : 'rpt-kpi-red') +
+    kpi(fmt(f.rentCollected) + ' \u058f', 'Rent Collected',  'of ' + fmt(f.rentTotal) + ' \u058f', '') +
+    kpi(fmt(f.elecCollected + f.netCollected) + ' \u058f', 'Utilities Collected', 'of ' + fmt(f.elecTotal + f.netTotal) + ' \u058f', '') +
+  '</div>';
+  var filterLabels = { all:'All', paid:'\u2705 Paid', unpaid:'\u23f3 Unpaid', deposit:'\u27f3 Deposit', prepaid:'\u2191 Prepaid' };
+  var controls = '<div class="rpt-controls">' +
+    '<div class="rpt-filter-bar">' +
+      Object.keys(filterLabels).map(function(k) {
+        return '<button class="rpt-pill' + (reportFilter === k ? ' active' : '') + '" onclick="setReportFilter(\'' + k + '\')">' + filterLabels[k] + '</button>';
+      }).join('') +
+    '</div>' +
+    '<div class="rpt-search-sort">' +
+      '<input class="rpt-search" id="rptSearch" type="text" placeholder="\ud83d\udd0d Office, name, phone\u2026" oninput="reportSearch=this.value;renderReportTable()" value="' + escapeHtml(reportSearch) + '">' +
+      '<select class="rpt-sort-sel" onchange="setReportSort(this.value)">' +
+        '<option value="apt"'    + (reportSort==='apt'   ?' selected':'') + '>Sort: Office</option>' +
+        '<option value="name"'   + (reportSort==='name'  ?' selected':'') + '>Sort: Name</option>' +
+        '<option value="rent"'   + (reportSort==='rent'  ?' selected':'') + '>Sort: Rent</option>' +
+        '<option value="due"'    + (reportSort==='due'   ?' selected':'') + '>Sort: Total Due</option>' +
+        '<option value="status"' + (reportSort==='status'?' selected':'') + '>Sort: Status</option>' +
+      '</select>' +
+    '</div>' +
+  '</div>';
+  var actions = '<div class="rpt-actions">' +
+    '<button class="export-btn primary" onclick="exportCSV()">\ud83d\udce5 Export CSV</button>' +
+    '<button class="export-btn" onclick="shareReport()">\ud83d\udce4 Share</button>' +
+  '</div>';
+  body.innerHTML = kpiRow + controls + '<div id="rptTableWrap"></div>' + actions;
+  renderReportTable();
+}
+
+function setReportFilter(f) {
+  reportFilter = f;
+  renderReportBody();
+}
+function setReportSort(col) {
+  if (reportSort === col) { reportSortDir *= -1; } else { reportSort = col; reportSortDir = 1; }
+  renderReportTable();
+}
+function rptSortArrow(col) { return reportSort === col ? (reportSortDir === 1 ? ' \u2191' : ' \u2193') : ''; }
+
+function rentBadge_(status) {
+  if (!status) return '<span class="rpt-badge rpt-unpaid">Unpaid</span>';
+  var m = { paid:'rpt-paid', deposit:'rpt-deposit', prepaid:'rpt-prepaid', partial:'rpt-partial' };
+  var l = { paid:'Paid', deposit:'Deposit', prepaid:'Prepaid', partial:'Partial' };
+  return '<span class="rpt-badge ' + (m[status]||'rpt-unpaid') + '">' + (l[status]||escapeHtml(status)) + '</span>';
+}
+function elecBadge_(status) {
+  if (!status) return '<span class="rpt-badge rpt-unpaid">Unpaid</span>';
+  if (status === 'paid') return '<span class="rpt-badge rpt-paid">Paid</span>';
+  return '<span class="rpt-badge rpt-partial">' + escapeHtml(status) + '</span>';
+}
+
+function renderReportTable() {
+  var wrap = document.getElementById('rptTableWrap');
+  if (!wrap) return;
+  var q = (reportSearch || '').trim().toLowerCase();
+  var rows = tenants.map(function(t) {
+    var s = st[t.apt] || {};
+    var e = utilityForTenant(t);
+    var elecAmt = (e.amdDay !== undefined) ? (e.amdDay + e.amdNight) : 0;
+    var netAmt  = tenantHasInternet(t, e) ? 5000 : 0;
+    var due  = t.rent + elecAmt + netAmt;
+    var paid = (isRentCovered(s.r) ? t.rent : 0) + (s.e === 'paid' ? elecAmt + netAmt : 0);
+    return { t:t, s:s, elecAmt:elecAmt, netAmt:netAmt, due:due, paid:paid, bal:due-paid };
+  });
+  if (reportFilter !== 'all') {
+    rows = rows.filter(function(r) {
+      if (reportFilter === 'unpaid') return !r.s.r || r.s.r === 'unpaid';
+      return r.s.r === reportFilter;
+    });
+  }
+  if (q) rows = rows.filter(function(r) {
+    return (officeKey(r.t.apt)+' '+tenantDisplayName(r.t)+' '+(r.t.phone||'')).toLowerCase().indexOf(q) !== -1;
+  });
+  var d = reportSortDir;
+  rows.sort(function(a, b) {
+    if (reportSort === 'name')   return tenantDisplayName(a.t).localeCompare(tenantDisplayName(b.t)) * d;
+    if (reportSort === 'rent')   return (a.t.rent - b.t.rent) * d;
+    if (reportSort === 'due')    return (a.due - b.due) * d;
+    if (reportSort === 'status') return ((a.s.r||'zzz').localeCompare(b.s.r||'zzz')) * d;
+    return officeKey(a.t.apt).localeCompare(officeKey(b.t.apt), undefined, {numeric:true}) * d;
+  });
+  if (!rows.length) { wrap.innerHTML = '<div class="rpt-empty">No tenants match your filters.</div>'; return; }
+  function th(col, label) { return '<th class="rpt-sortable' + (reportSort===col?' rpt-th-active':'') + '" onclick="setReportSort(\'' + col + '\')">' + label + rptSortArrow(col) + '</th>'; }
+  var totalRent = 0, totalDue = 0, totalPaid = 0, totalBal = 0;
+  var tbodyRows = rows.map(function(r) {
+    totalRent += r.t.rent; totalDue += r.due; totalPaid += r.paid; totalBal += r.bal;
+    var entity = r.t.entityType === 'legal' ? '<span class="rpt-entity rpt-entity-legal">Legal</span>' : '<span class="rpt-entity rpt-entity-phys">Physical</span>';
+    return '<tr>' +
+      '<td class="rpt-apt">' + escapeHtml(officeKey(r.t.apt)) + '</td>' +
+      '<td><div class="rpt-tname">' + escapeHtml(tenantDisplayName(r.t)) + '</div>' + entity + '</td>' +
+      '<td class="rpt-num">' + fmt(r.t.rent) + '</td>' +
+      '<td>' + rentBadge_(r.s.r) + '</td>' +
+      '<td class="rpt-num">' + (r.elecAmt ? fmt(r.elecAmt) : '\u2014') + '</td>' +
+      '<td>' + elecBadge_(r.s.e) + '</td>' +
+      '<td class="rpt-num">' + (r.netAmt ? fmt(r.netAmt) : '\u2014') + '</td>' +
+      '<td class="rpt-num rpt-strong">' + fmt(r.due) + '</td>' +
+      '<td class="rpt-num c-green">' + fmt(r.paid) + '</td>' +
+      '<td class="rpt-num ' + (r.bal > 0 ? 'c-red' : 'c-green') + ' rpt-strong">' + fmt(r.bal) + '</td>' +
+    '</tr>';
+  }).join('');
+  wrap.innerHTML = '<table class="rpt-table">' +
+    '<thead><tr>' +
+      th('apt','Office') + th('name','Tenant') +
+      '<th class="rpt-num">Rent</th>' +
+      th('status','Rent') +
+      '<th class="rpt-num">Electricity</th>' +
+      '<th>Elec</th>' +
+      '<th class="rpt-num">Internet</th>' +
+      th('due','Total Due') +
+      '<th class="rpt-num">Paid</th>' +
+      '<th class="rpt-num">Balance</th>' +
+    '</tr></thead>' +
+    '<tbody>' + tbodyRows + '</tbody>' +
+    '<tfoot><tr>' +
+      '<td colspan="2" class="rpt-foot-lbl">' + rows.length + ' offices</td>' +
+      '<td class="rpt-num rpt-strong">' + fmt(totalRent) + '</td>' +
+      '<td colspan="4"></td>' +
+      '<td class="rpt-num rpt-strong">' + fmt(totalDue) + '</td>' +
+      '<td class="rpt-num c-green rpt-strong">' + fmt(totalPaid) + '</td>' +
+      '<td class="rpt-num c-red rpt-strong">' + fmt(totalBal) + '</td>' +
+    '</tr></tfoot>' +
+  '</table>';
 }
 
 function exportCSV() {
@@ -2827,6 +3891,7 @@ function clearRentPayment(apt, tenantName) {
 function saveTenant(apt, fields) {
   var url = API + '?action=updateTenant' +
     '&apt=' + encodeURIComponent(apt) +
+    '&tenancyId=' + encodeURIComponent(fields.tenancyId || '') +
     '&name=' + encodeURIComponent(fields.name) +
     '&phone=' + encodeURIComponent(fields.phone) +
     '&ch=' + encodeURIComponent(fields.ch) +
@@ -2997,6 +4062,16 @@ function resetContractFields(t) {
   setInputValue('eStartDate', dateInputValue(t.startDate));
   setInputValue('eEndDate', dateInputValue(t.endDate));
   setInputValue('ePaymentDate', t.paymentDate || t.day || '');
+  setInputValue('eFirstPaymentDate', dateInputValue(t.firstPaymentDate));
+  setInputValue('eDepositDate', dateInputValue(t.depositPaymentDate));
+  setInputValue('eCity', t.city || document.getElementById('docCity').defaultValue);
+  setInputValue('ePropertyAddress', t.propertyAddress || document.getElementById('docPropertyAddress').defaultValue);
+  setInputValue('eFloor', t.floor || document.getElementById('docFloor').defaultValue);
+  setInputValue('eWing', t.wing || document.getElementById('docWing').defaultValue);
+  setInputValue('eUnitDescription', t.unitDescription || '');
+  setInputValue('ePurpose', t.purpose || document.getElementById('docPurpose').defaultValue);
+  setInputValue('eTenantBank', t.tenantBank || '');
+  setInputValue('eTenantBankAccount', t.tenantBankAccount || '');
   updateEntityFields();
 }
 
@@ -3099,13 +4174,25 @@ function saveEdit() {
     ceoValidUntil: document.getElementById('eCeoValidUntil').value,
     startDate: document.getElementById('eStartDate').value,
     endDate: document.getElementById('eEndDate').value,
-    paymentDate: document.getElementById('ePaymentDate').value || document.getElementById('eD').value
+    paymentDate: document.getElementById('ePaymentDate').value || document.getElementById('eD').value,
+    firstPaymentDate: document.getElementById('eFirstPaymentDate').value,
+    depositPaymentDate: document.getElementById('eDepositDate').value,
+    city: document.getElementById('eCity').value.trim(),
+    propertyAddress: document.getElementById('ePropertyAddress').value.trim(),
+    floor: document.getElementById('eFloor').value.trim(),
+    wing: document.getElementById('eWing').value.trim(),
+    unitDescription: document.getElementById('eUnitDescription').value.trim(),
+    purpose: document.getElementById('ePurpose').value.trim(),
+    tenantBank: document.getElementById('eTenantBank').value.trim(),
+    tenantBankAccount: document.getElementById('eTenantBankAccount').value.trim()
   };
   if (!fields.name || !fields.rent) {
     toast('Name and rent are required', 'error');
     btn.textContent = '💾 Save'; btn.disabled = false;
     return;
   }
+  var _et = tenants.find(function(x) { return x.apt === aptValue; });
+  if (_et && _et.tenancyId) fields.tenancyId = _et.tenancyId;
   saveTenant(aptValue, fields).then(function(ok) {
     if (ok) {
       var t = tenants.find(function(x) { return x.apt === aptValue; });
@@ -3118,7 +4205,7 @@ function saveEdit() {
       }
       if (elecMap[aptValue]) elecMap[aptValue].internet = (fields.internet === 'yes');
       toast('✓ Saved', 'success');
-      closeModal(); render();
+      closeModal(); render(); refreshTenantsIfOpen(); refreshContractWizardIfOpen();
     } else { toast('✗ Error', 'error'); }
     btn.textContent = '💾 Save'; btn.disabled = false;
   });
@@ -3226,7 +4313,82 @@ function hyAmountWords(n) {
   return parts.join(' ');
 }
 
+function tenantDocumentParams(apt) {
+  var tenant = tenants.find(function(t) { return String(t.apt) === String(apt); });
+  return {
+    apt: tenant ? tenant.apt : apt,
+    tenantName: tenant ? tenantDisplayName(tenant) : ''
+  };
+}
+
+function openTenantFolder(apt) {
+  var target = window.open('about:blank', '_blank');
+  var p = tenantDocumentParams(apt);
+  var url = API + '?action=getTenantFolder&apt=' + encodeURIComponent(p.apt) +
+    '&tenantName=' + encodeURIComponent(p.tenantName);
+  toast('Opening tenant folder...', 'success');
+  jsonpRetry(url, 2, 30000).then(function(res) {
+    if (!res || !res.ok || !res.folderUrl) throw new Error((res && res.error) || 'Could not open folder');
+    if (target) target.location.href = res.folderUrl;
+    else window.open(res.folderUrl, '_blank');
+  }).catch(function(err) {
+    if (target) target.close();
+    toast((err && err.message) || 'Could not open folder', 'error');
+  });
+}
+
+function chooseTenantFile(apt) {
+  uploadTenantApt = apt;
+  var input = document.getElementById('tenantFileInput');
+  input.value = '';
+  input.click();
+}
+
+document.getElementById('tenantFileInput').addEventListener('change', function() {
+  var file = this.files && this.files[0];
+  if (!file || !uploadTenantApt) return;
+  if (file.size > 15 * 1024 * 1024) {
+    toast('File is too large. Maximum size is 15 MB.', 'error');
+    return;
+  }
+
+  var apt = uploadTenantApt;
+  var p = tenantDocumentParams(apt);
+  var reader = new FileReader();
+  toast('Uploading ' + file.name + '...', 'success');
+  reader.onload = function() {
+    var fileData = String(reader.result || '').split(',')[1] || '';
+    var body = new URLSearchParams({
+      action: 'uploadTenantFile',
+      apt: String(p.apt || ''),
+      tenantName: p.tenantName || '',
+      fileName: file.name,
+      mimeType: file.type || 'application/octet-stream',
+      fileData: fileData
+    });
+    fetch(API, {
+      method: 'POST',
+      credentials: 'omit',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+      body: body.toString()
+    }).then(function(response) {
+      if (!response.ok) throw new Error('Upload failed: HTTP ' + response.status);
+      return response.json();
+    }).then(function(res) {
+      if (!res || !res.ok) throw new Error((res && res.error) || 'Upload failed');
+      toast('Uploaded: ' + res.fileName, 'success');
+    }).catch(function(err) {
+      toast((err && err.message) || 'Upload failed', 'error');
+    });
+  };
+  reader.onerror = function() { toast('Could not read the selected file', 'error'); };
+  reader.readAsDataURL(file);
+});
+
 function openContractWizard(apt) {
+  if (!document.getElementById('docDate').value) {
+    document.getElementById('docDate').value = todayInputDate();
+  }
   populateDocTenants(apt);
   document.getElementById('docType').value = 'contract';
   changeDocType();
@@ -3236,6 +4398,11 @@ function openContractWizard(apt) {
 
 function closeContractWizard() {
   document.getElementById('contractModalBg').classList.add('hidden');
+}
+
+function refreshContractWizardIfOpen() {
+  var bg = document.getElementById('contractModalBg');
+  if (bg && !bg.classList.contains('hidden')) fillDocFromTenant();
 }
 
 function populateDocTenants(selectedApt) {
@@ -3255,22 +4422,121 @@ function selectedDocTenant() {
 function fillDocFromTenant() {
   var t = selectedDocTenant();
   if (!t) return;
-  document.getElementById('docUnit').value = 'թիվ ' + t.apt + ' ոչ բնակելի տարածք';
-  document.getElementById('docTermStart').value = dateInputValue(t.startDate);
-  document.getElementById('docTermEnd').value = dateInputValue(t.endDate);
+  var documentDate = document.getElementById('docDate').value || todayInputDate();
+  var contractStart = dateInputValue(t.startDate) || documentDate;
+  var contractEnd = dateInputValue(t.endDate) || addMonthsToInputDate(contractStart, 3);
+  document.getElementById('docCity').value = t.city || document.getElementById('docCity').defaultValue;
+  document.getElementById('docPropertyAddress').value = t.propertyAddress || document.getElementById('docPropertyAddress').defaultValue;
+  document.getElementById('docFloor').value = t.floor || document.getElementById('docFloor').defaultValue;
+  document.getElementById('docWing').value = t.wing || document.getElementById('docWing').defaultValue;
+  document.getElementById('docUnit').value = t.unitDescription || ('թիվ ' + t.apt + ' ոչ բնակելի տարածք');
+  document.getElementById('docPurpose').value = t.purpose || document.getElementById('docPurpose').defaultValue;
+  document.getElementById('docTermStart').value = contractStart;
+  document.getElementById('docTermEnd').value = contractEnd;
   document.getElementById('docRent').value = t.rent || '';
   document.getElementById('docPaymentDay').value = t.paymentDate || t.day || '';
-  document.getElementById('docFirstPaymentDate').value = dateInputValue(t.startDate);
-  document.getElementById('docDepositDate').value = dateInputValue(t.startDate);
+  document.getElementById('docFirstPaymentDate').value = dateInputValue(t.firstPaymentDate) || contractStart;
+  document.getElementById('docDepositDate').value = dateInputValue(t.depositPaymentDate) || contractStart;
+  document.getElementById('docTenantAddress').value = t.legalAddress || t.physicalAddress || '';
+  document.getElementById('docPhone').value = formatArmenianPhone(t.phone || '');
+  document.getElementById('docTenantBank').value = t.tenantBank || '';
+  document.getElementById('docTenantBankAccount').value = t.tenantBankAccount || '';
+  document.getElementById('docCh').value = t.ch || 'wa';
+  document.getElementById('docInternet').value = t.internet ? 'yes' : 'no';
+  document.getElementById('docSkipPrevUtil').value = t.skipPreviousUtilities ? 'yes' : 'no';
+  renderDocTenantCard(t);
+  document.getElementById('docOriginalContractDate').value = contractStart;
+  document.getElementById('docSpecialPeriodStart').value = addMonthsToInputDate(contractEnd, -1);
+  document.getElementById('docSpecialPeriodEnd').value = contractEnd;
+  document.getElementById('docSpecialRent').value = t.rent || '';
+  document.getElementById('docSpecialDeadline').value =
+    document.getElementById('docSpecialDeadline').value || documentDate;
   updateDocPreview();
+}
+
+
+function renderDocTenantCard(t) {
+  var isLegal = t && t.entityType === 'legal';
+  var required = isLegal
+    ? [['Legal name', t.legalName], ['HVHH', t.hvhh], ['Registration number', t.registrationNumber], ['Director name', t.ceoName], ['Director passport', t.ceoPassport], ['Legal address', t.legalAddress]]
+    : [['Name', t.physicalName || t.name], ['Passport', t.physicalPassport], ['Issued from', t.physicalIssuedFrom], ['Valid until', t.physicalValidUntil], ['Address', t.physicalAddress]];
+  var missing = required.filter(function(r) { return !String(r[1] || '').trim(); }).map(function(r) { return r[0]; });
+  function row(k, v) { return '<div class="contract-preview-row"><strong>' + escapeHtml(k) + '</strong><span>' + escapeHtml(v || '?') + '</span></div>'; }
+  var rows = isLegal
+    ? [row('Legal name', t.legalName), row('HVHH', t.hvhh), row('Registration number', t.registrationNumber), row('Legal address', t.legalAddress), row('Director', t.ceoName), row('Director passport', t.ceoPassport), row('Director address', t.ceoAddress), row('Director issued from', t.ceoIssuedFrom), row('Director valid until', hyDate(t.ceoValidUntil))]
+    : [row('Name', t.physicalName || t.name), row('Passport', t.physicalPassport), row('Issued from', t.physicalIssuedFrom), row('Valid until', hyDate(t.physicalValidUntil)), row('Address', t.physicalAddress)];
+  rows.push(row('Phone', formatArmenianPhone(t.phone || '')));
+  rows.push(row('Bank', t.tenantBank || ''));
+  rows.push(row('Bank account', t.tenantBankAccount || ''));
+  document.getElementById('docIdentitySection').innerHTML =
+    '<div class="contract-section-title">Tenant data <span class="tnt-pill ' + (isLegal ? 'legal' : 'physical') + '">' + (isLegal ? 'Legal' : 'Physical') + '</span></div>' +
+    (missing.length ? '<div class="contract-warning">Missing tenant fields: ' + escapeHtml(missing.join(', ')) + '. Use Edit tenant details.</div>' : '') +
+    '<div class="contract-preview">' + rows.join('') + '</div>' +
+    '<button class="contract-secondary" type="button" onclick="openEditFromWizard()">?? Edit tenant details</button>';
+}
+
+function openEditFromWizard() {
+  var t = selectedDocTenant();
+  if (t) openEdit(t.apt);
 }
 
 function changeDocType() {
   var isExtension = document.getElementById('docType').value === 'extension';
+  var tenant = selectedDocTenant();
   document.getElementById('extensionFields').style.display = isExtension ? '' : 'none';
   document.getElementById('docDateLabel').textContent = isExtension ? 'Agreement date' : 'Contract date';
   document.getElementById('docGenerateBtn').textContent = isExtension ? 'Generate extension DOC + PDF' : 'Generate contract DOC + PDF';
+  if (tenant) {
+    var documentDate = document.getElementById('docDate').value || todayInputDate();
+    var contractStart = dateInputValue(tenant.startDate) || documentDate;
+    var contractEnd = dateInputValue(tenant.endDate) || addMonthsToInputDate(contractStart, 3);
+    if (isExtension) {
+      document.getElementById('docOriginalContractDate').value = contractStart;
+      document.getElementById('docTermStart').value = contractEnd;
+      document.getElementById('docTermEnd').value = addMonthsToInputDate(contractEnd, 1);
+      document.getElementById('docSpecialPeriodStart').value = addMonthsToInputDate(contractEnd, -1);
+      document.getElementById('docSpecialPeriodEnd').value = contractEnd;
+      document.getElementById('docSpecialDeadline').value =
+        document.getElementById('docSpecialDeadline').value || documentDate;
+    } else {
+      document.getElementById('docTermStart').value = contractStart;
+      document.getElementById('docTermEnd').value = contractEnd;
+      document.getElementById('docFirstPaymentDate').value = contractStart;
+      document.getElementById('docDepositDate').value = contractStart;
+    }
+  }
   updateDocDatePreview();
+  updateDocPreview();
+}
+
+function addMonthsToInputDate(value, months) {
+  if (!value) return '';
+  var parts = value.split('-').map(Number);
+  if (parts.length !== 3) return '';
+  var date = new Date(parts[0], parts[1] - 1 + months, parts[2]);
+  return date.getFullYear() + '-' +
+    String(date.getMonth() + 1).padStart(2, '0') + '-' +
+    String(date.getDate()).padStart(2, '0');
+}
+
+function todayInputDate() {
+  var now = new Date();
+  return now.getFullYear() + '-' +
+    String(now.getMonth() + 1).padStart(2, '0') + '-' +
+    String(now.getDate()).padStart(2, '0');
+}
+
+function formatArmenianPhone(value) {
+  var digits = String(value || '').replace(/\D/g, '');
+  if (digits.length === 9 && digits.charAt(0) === '0') digits = digits.slice(1);
+  if (digits.length === 11 && digits.indexOf('374') === 0) digits = digits.slice(3);
+  if (digits.length !== 8) return String(value || '').trim();
+  return '+374 ' + digits.slice(0, 2) + ' ' + digits.slice(2);
+}
+
+function normalizeDocPhone() {
+  var input = document.getElementById('docPhone');
+  input.value = formatArmenianPhone(input.value);
   updateDocPreview();
 }
 
@@ -3296,15 +4562,26 @@ function docPayload() {
     apt: t ? t.apt : '',
     tenantName: t ? tenantDisplayName(t) : '',
     entityType: t ? (t.entityType || '') : '',
-    hvhh: t ? (t.hvhh || '') : '',
-    phone: t ? (t.phone || '') : '',
+    // hvhh now read from docHvhh form field above
+    phone: t ? formatArmenianPhone(t.phone || '') : '',
     legalAddress: t ? (t.legalAddress || t.physicalAddress || '') : '',
-    passport: t ? (t.physicalPassport || t.ceoPassport || '') : '',
+    physicalPassport: t ? (t.physicalPassport || '') : '',
+    physicalIssuedFrom: t ? (t.physicalIssuedFrom || '') : '',
+    physicalValidUntil: t ? (t.physicalValidUntil || '') : '',
+    passport: t ? (t.physicalPassport || '') : '',
+    hvhh: t ? (t.hvhh || '') : '',
+    registrationNumber: t ? (t.registrationNumber || '') : '',
     representativeName: t ? (t.ceoName || '') : '',
+    ceoName: t ? (t.ceoName || '') : '',
+    ceoPassport: t ? (t.ceoPassport || '') : '',
+    ceoAddress: t ? (t.ceoAddress || '') : '',
+    ceoIssuedFrom: t ? (t.ceoIssuedFrom || '') : '',
+    ceoValidUntil: t ? (t.ceoValidUntil || '') : '',
     documentDate: document.getElementById('docDate').value,
     city: document.getElementById('docCity').value.trim(),
     propertyAddress: document.getElementById('docPropertyAddress').value.trim(),
     floor: document.getElementById('docFloor').value.trim(),
+    wing: document.getElementById('docWing').value.trim(),
     unitDescription: document.getElementById('docUnit').value.trim(),
     purpose: document.getElementById('docPurpose').value.trim(),
     termStart: document.getElementById('docTermStart').value,
@@ -3314,9 +4591,16 @@ function docPayload() {
     paymentDay: document.getElementById('docPaymentDay').value,
     firstPaymentDate: document.getElementById('docFirstPaymentDate').value,
     depositPaymentDate: document.getElementById('docDepositDate').value,
+    tenantAddress: t ? (t.physicalAddress || t.legalAddress || '') : '',
+    tenantBank: t ? (t.tenantBank || '') : '',
+    tenantBankAccount: t ? (t.tenantBankAccount || '') : '',
     extensionNumber: document.getElementById('docExtensionNumber').value,
+    originalContractDate: document.getElementById('docOriginalContractDate').value,
     extensionPeriodText: document.getElementById('docExtensionPeriod').value.trim(),
+    specialPeriodStart: document.getElementById('docSpecialPeriodStart').value,
+    specialPeriodEnd: document.getElementById('docSpecialPeriodEnd').value,
     specialRentAmount: document.getElementById('docSpecialRent').value,
+    specialRentInWords: hyAmountWords(document.getElementById('docSpecialRent').value || document.getElementById('docRent').value),
     specialPaymentDeadline: document.getElementById('docSpecialDeadline').value
   };
 }
@@ -3328,11 +4612,18 @@ function validateDocPayload(p) {
   if (!p.termStart) missing.push('term start');
   if (!p.termEnd) missing.push('term end');
   if (!p.monthlyRent) missing.push('monthly rent');
-  if (!p.paymentDay) missing.push('payment day');
   if (!p.unitDescription) missing.push('unit');
+  if (!p.phone) missing.push('phone');
+  if (p.type === 'contract' && !p.paymentDay) missing.push('payment day');
+  if (p.type === 'contract' && !p.firstPaymentDate) missing.push('first payment date');
+  if (p.type === 'contract' && !p.depositPaymentDate) missing.push('deposit payment date');
+  if (p.type === 'extension' && !p.originalContractDate) missing.push('original contract date');
+  if (p.type === 'extension' && !p.specialPeriodStart) missing.push('special period start');
+  if (p.type === 'extension' && !p.specialPeriodEnd) missing.push('special period end');
+  if (p.type === 'extension' && !p.specialPaymentDeadline) missing.push('special payment deadline');
   if (missing.length) return 'Missing: ' + missing.join(', ');
   if (p.hvhh && !/^\d{8}$/.test(String(p.hvhh))) return 'ՀՎՀՀ must contain exactly 8 digits.';
-  if (p.phone && !/^\+?374\s?\d{2}\s?\d{6}$/.test(String(p.phone).replace(/[-()]/g, '').trim())) return 'Phone should be in +374 format.';
+  if (!/^\+374\s\d{2}\s\d{6}$/.test(p.phone)) return 'Phone should be in +374 format, for example +374 91 123456.';
   if (Number(p.paymentDay) < 1 || Number(p.paymentDay) > 31) return 'Payment day must be 1–31.';
   return '';
 }
@@ -3365,19 +4656,21 @@ function generateDocument() {
   var btn = document.getElementById('docGenerateBtn');
   btn.disabled = true; btn.textContent = 'Generating...';
   var action = p.type === 'extension' ? 'generateExtension' : 'generateContract';
-  var url = CONTRACT_API + '?action=' + action;
+  var requestId = action + '-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+  var url = API + '?action=' + action + '&requestId=' + encodeURIComponent(requestId);
   Object.keys(p).forEach(function(k) { url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(p[k] || ''); });
-  jsonpRetry(url, 2).then(function(res) {
+  jsonpRetry(url, 2, 60000).then(function(res) {
     if (!res || !res.ok) throw new Error((res && res.error) || 'Generation failed');
     var links = '<div class="contract-preview-row"><strong>DOC</strong><span><a target="_blank" href="' + escapeHtml(res.docUrl || '') + '">Open editable document</a></span></div>' +
-      '<div class="contract-preview-row"><strong>PDF</strong><span><a target="_blank" href="' + escapeHtml(res.pdfUrl || '') + '">Open PDF</a></span></div>';
+      '<div class="contract-preview-row"><strong>PDF</strong><span><a target="_blank" href="' + escapeHtml(res.pdfUrl || '') + '">Open PDF</a></span></div>' +
+      '<div class="contract-preview-row"><strong>Folder</strong><span><a target="_blank" href="' + escapeHtml(res.folderUrl || '') + '">Open tenant folder</a></span></div>';
     document.getElementById('docPreview').innerHTML = '<strong>Generated successfully.</strong>' + links;
     toast('Document generated', 'success');
   }).catch(function(e) {
     toast((e && e.message) || 'Generation failed', 'error');
   }).finally(function() {
     btn.disabled = false;
-    changeDocType();
+    btn.textContent = p.type === 'extension' ? 'Generate extension DOC + PDF' : 'Generate contract DOC + PDF';
   });
 }
 
@@ -3705,6 +4998,8 @@ function render() {
         '<div class="quick-btns">' +
           '<button class="icon-btn" data-edit="' + t.apt + '" title="Edit">✏️</button>' +
           '<button class="icon-btn" data-doc="' + t.apt + '" title="Contract docs">📄</button>' +
+          '<button class="icon-btn" data-folder="' + t.apt + '" title="Open tenant folder">📁</button>' +
+          '<button class="icon-btn" data-upload="' + t.apt + '" title="Upload passport or document">⬆</button>' +
           '<button class="icon-btn" data-remind="' + t.apt + '" title="Rent reminder">📋</button>' +
           '<button class="send-btn" data-send="' + t.apt + '" title="Send reminder">📤</button>' +
         '</div>' +
@@ -3723,6 +5018,12 @@ function render() {
     });
     div.querySelectorAll('[data-doc]').forEach(function(btn) {
       btn.addEventListener('click', function(ev) { ev.stopPropagation(); openContractWizard(this.dataset.doc); });
+    });
+    div.querySelectorAll('[data-folder]').forEach(function(btn) {
+      btn.addEventListener('click', function(ev) { ev.stopPropagation(); openTenantFolder(this.dataset.folder); });
+    });
+    div.querySelectorAll('[data-upload]').forEach(function(btn) {
+      btn.addEventListener('click', function(ev) { ev.stopPropagation(); chooseTenantFile(this.dataset.upload); });
     });
     div.querySelectorAll('[data-deposit]').forEach(function(btn) {
       btn.addEventListener('click', function(ev) {
@@ -3790,8 +5091,9 @@ function rLabel(s) {
 (function() {
   var startY = 0, pulling = false;
   var ptr = document.getElementById('ptrIndicator');
+  var scroller = document.getElementById('mainArea');
   document.addEventListener('touchstart', function(e) {
-    if (window.scrollY === 0) { startY = e.touches[0].clientY; pulling = true; }
+    if (scroller && scroller.scrollTop <= 1) { startY = e.touches[0].clientY; pulling = true; }
   }, { passive: true });
   document.addEventListener('touchmove', function(e) {
     if (!pulling) return;
@@ -4362,6 +5664,183 @@ setInterval(function() { if (document.visibilityState === 'visible') refreshAll(
 setInterval(function() {
   if (lastSyncTime) document.getElementById('lastSync').textContent = timeAgo(lastSyncTime);
 }, 30000);
+
+/* ═════════════════════════════
+   TENANTS MANAGEMENT (Phase 2: read-only listing)
+   Renders from the in-memory `tenants` array (active tenants,
+   each carrying tenancyId + status from the backend). Archived
+   history + edit/turnover come in later phases.
+══════════════════════════════ */
+function openTenants()  { switchMainTab('tenants'); }
+function closeTenants() { switchMainTab('rent'); }
+function refreshTenantsIfOpen() {
+  if (mainTab === 'tenants') renderTenantsList();
+}
+function tenantsSorted_() {
+  return tenants.slice().sort(function(a, b) {
+    return officeKey(a.apt).localeCompare(officeKey(b.apt), undefined, { numeric: true });
+  });
+}
+function renderTenantsList() {
+  var q = (document.getElementById('tenantsSearch').value || '').trim().toLowerCase();
+  var list = tenantsSorted_().filter(function(t) {
+    if (!q) return true;
+    var hay = (officeKey(t.apt) + ' ' + tenantDisplayName(t) + ' ' + (t.phone || '')).toLowerCase();
+    return hay.indexOf(q) !== -1;
+  });
+  document.getElementById('tenantsCount').textContent =
+    list.length + (list.length === 1 ? ' office' : ' offices');
+  var body = document.getElementById('tenantsBody');
+  body.innerHTML = list.length
+    ? list.map(tenantCardHtml_).join('')
+    : '<div class="tnt-empty">No tenants match your search.</div>';
+}
+function tenantCardHtml_(t) {
+  var name   = tenantDisplayName(t) || '—';
+  var entity = (t.entityType === 'legal') ? 'legal' : 'physical';
+  var status = (t.status === 'finished') ? 'finished' : 'active';
+  var rent   = t.rent ? (fmt(t.rent) + ' ֏') : '—';
+  var day    = t.day ? ('Day ' + t.day) : '—';
+  var phone  = t.phone || '—';
+  var net    = t.internet ? 'Yes' : 'No';
+  var start  = t.startMonth || (t.startDate ? String(t.startDate).slice(0, 10) : '—');
+  function m(k, v) {
+    return '<div class="tnt-m"><span class="tnt-k">' + k + '</span><span class="tnt-v">' + escapeHtml(String(v)) + '</span></div>';
+  }
+  return '<div class="tnt-card">' +
+    '<div class="tnt-card-top">' +
+      '<div><div class="tnt-office">' + escapeHtml(officeKey(t.apt)) + '</div>' +
+        '<div class="tnt-name">' + escapeHtml(name) + '</div></div>' +
+      '<div class="tnt-pills">' +
+        '<span class="tnt-pill ' + status + '">' + (status === 'finished' ? 'Finished' : 'Active') + '</span>' +
+        '<span class="tnt-pill ' + entity + '">' + (entity === 'legal' ? 'Legal' : 'Physical') + '</span>' +
+      '</div>' +
+    '</div>' +
+    '<div class="tnt-meta">' +
+      m('Rent', rent) + m('Payment', day) +
+      m('Phone', phone) + m('Internet', net) +
+      m('Since', start) +
+    '</div>' +
+    '<div class="tnt-actions" data-apt="' + escapeHtml(officeKey(t.apt)) + '" data-id="' + escapeHtml(t.tenancyId || '') + '">' +
+      '<button class="tnt-btn" data-act="edit">\u270F\uFE0F Edit</button>' +
+      '<button class="tnt-btn" data-act="drive">📁 Drive</button>' +
+      '<button class="tnt-btn" data-act="upload">\u2B06\uFE0F Upload</button>' +
+      '<button class="tnt-btn" data-act="contract">📄 Contract</button>' +
+    '</div>' +
+  '</div>';
+}
+
+function tenantActionUrl(action, params) {
+  var url = API + '?action=' + encodeURIComponent(action);
+  Object.keys(params || {}).forEach(function(k) { url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(params[k] || ''); });
+  return url;
+}
+
+function finishTenancyFlow(tenancyId, apt) {
+  if (!tenancyId) { toast('Run backend backfillTenancyIds first, then reload.', 'error'); return; }
+  var endDate = prompt('End date (YYYY-MM-DD)', todayInputDate());
+  if (!endDate) return;
+  var disposition = prompt('Deposit disposition: returned, withheld, or carried', 'returned') || '';
+  var skip = confirm('Skip / waive unpaid previous utilities? OK = yes, Cancel = tenant pays') ? 'yes' : 'no';
+  jsonpRetry(tenantActionUrl('finishTenancy', { tenancyId: tenancyId, endDate: endDate, depositDisposition: disposition, skipPreviousUtilities: skip }), 2)
+    .then(function(res) { if (!res || !res.ok) throw new Error((res && res.error) || 'Finish failed'); return reloadForMonth(); })
+    .then(function() { toast('Tenancy finished', 'success'); renderTenantsList(); })
+    .catch(function(e) { toast(e.message || 'Finish failed', 'error'); });
+}
+
+function deleteTenancyConfirm(tenancyId) {
+  if (!tenancyId) { toast('Run backend backfillTenancyIds first, then reload.', 'error'); return; }
+  if (!confirm('This permanently deletes this tenancy record. This cannot be undone.')) return;
+  if (!confirm('Confirm again: delete this record permanently?')) return;
+  jsonpRetry(tenantActionUrl('deleteTenancy', { tenancyId: tenancyId }), 2)
+    .then(function(res) { if (!res || !res.ok) throw new Error((res && res.error) || 'Delete failed'); tenants = tenants.filter(function(t) { return t.tenancyId !== tenancyId; }); renderTenantsList(); toast('Tenancy deleted', 'success'); })
+    .catch(function(e) { toast(e.message || 'Delete failed', 'error'); });
+}
+
+function openTenantHistory(apt) {
+  jsonpRetry(tenantActionUrl('getTenantHistory', { apt: apt }), 2)
+    .then(function(res) {
+      if (!res || !res.ok) throw new Error((res && res.error) || 'History failed');
+      var lines = (res.tenancies || []).map(function(t) { return officeKey(t.apt) + ' ? ' + tenantDisplayName(t) + ' ? ' + (t.status || '') + ' ? ' + (t.startDate || '?') + ' ? ' + (t.endDate || '?') + ' ? ' + fmt(t.rent || 0) + ' ?'; });
+      alert(lines.length ? lines.join('\n') : 'No history for office ' + apt);
+    })
+    .catch(function(e) { toast(e.message || 'History failed', 'error'); });
+}
+
+function switchMainTab(tab) {
+  mainTab = tab;
+  document.querySelectorAll('.sidebar-item').forEach(function(b) {
+    var on = b.getAttribute('data-maintab') === tab;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  var rentZone    = document.getElementById('rentStickyZone');
+  var tenantsZone = document.getElementById('tenantsStickyZone');
+  var tenantsPane = document.getElementById('tenantsPanel');
+  var mainWrap    = document.getElementById('mainWrap');
+  if (mainWrap) mainWrap.classList.toggle('reports-mode', tab === 'reports');
+  if (tab === 'rent') {
+    rentZone.style.display    = '';
+    tenantsZone.style.display = 'none';
+    tenantsPane.style.display = 'none';
+    mainWrap.style.display    = '';
+    hideMeterPanel();
+    document.getElementById('reportBody').style.display = 'none';
+    render();
+  } else if (tab === 'utilities') {
+    rentZone.style.display    = 'none';
+    tenantsZone.style.display = 'none';
+    tenantsPane.style.display = 'none';
+    mainWrap.style.display    = '';
+    document.getElementById('reportBody').style.display = 'none';
+    renderMeterPanel();
+  } else if (tab === 'tenants') {
+    rentZone.style.display    = 'none';
+    tenantsZone.style.display = '';
+    tenantsPane.style.display = '';
+    mainWrap.style.display    = 'none';
+    document.getElementById('reportBody').style.display = 'none';
+    if (mainTab !== 'utilities') hideMeterPanel();
+    renderTenantsList();
+  } else if (tab === 'reports') {
+    rentZone.style.display    = 'none';
+    tenantsZone.style.display = 'none';
+    tenantsPane.style.display = 'none';
+    mainWrap.style.display    = '';
+    hideMeterPanel();
+    document.getElementById('statsGrid').style.display = 'none';
+    document.getElementById('list').style.display      = 'none';
+    var sb = mainWrap.querySelector('.sort-bar'); if (sb) sb.style.display = 'none';
+    document.getElementById('reportBody').style.display = 'block';
+    reportOpen = true;
+    renderReportBody();
+  }
+}
+
+(function() {
+  var sInput = document.getElementById('tenantsSearch');
+  if (sInput) sInput.addEventListener('input', renderTenantsList);
+  var body = document.getElementById('tenantsBody');
+  if (body) body.addEventListener('click', function(e) {
+    var btn = e.target.closest('.tnt-btn');
+    if (!btn) return;
+    var wrap = btn.closest('.tnt-actions');
+    var apt = wrap ? wrap.getAttribute('data-apt') : '';
+    var tenancyId = wrap ? wrap.getAttribute('data-id') : '';
+    if (!apt) return;
+    var act = btn.getAttribute('data-act');
+    if (act === 'edit')     openEdit(apt);
+    else if (act === 'drive')    openTenantFolder(apt);
+    else if (act === 'upload')   chooseTenantFile(apt);
+    else if (act === 'contract') openContractWizard(apt);
+    else if (act === 'finish')   finishTenancyFlow(tenancyId, apt);
+    else if (act === 'delete')   deleteTenancyConfirm(tenancyId);
+    else if (act === 'history')  openTenantHistory(apt);
+  });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && mainTab === 'tenants') switchMainTab('rent');
+  });
+})();
 
 </script>
 </body>
