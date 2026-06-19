@@ -996,15 +996,14 @@ function openDetail(id) {
   const owner    = (mainTenants||[]).find(t=>t.apt===ownerApt);
 
   const photos = (it.photos && it.photos.length) ? it.photos : (it.photo ? [it.photo] : []);
-  const photoHTML = photos.length
-    ? `<div class="detail-img" style="cursor:pointer;position:relative" onclick="openPhotoViewer(${JSON.stringify(photos)},0)">
-        <img src="${photos[0]}" alt="" style="width:100%;height:200px;object-fit:cover;border-radius:var(--radius);display:block">
-        ${photos.length > 1 ? `<div style="position:absolute;bottom:10px;right:10px;background:rgba(15,35,55,.65);color:#fff;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:800">📷 ${photos.length} photos</div>` : ''}
-      </div>`
-    : `<div class="detail-img">${CAT_ICONS[it.category]||'📦'}</div>`;
+  const photoBtn = photos.length
+    ? `<button class="btn-ghost" style="width:100%;justify-content:center;margin-bottom:14px;gap:8px;height:44px;font-size:14px" onclick="openPhotoViewer(${JSON.stringify(photos)},0)">
+        📷 View Photo${photos.length>1?'s ('+photos.length+')':''}
+       </button>`
+    : `<div style="text-align:center;font-size:42px;margin-bottom:14px">${CAT_ICONS[it.category]||'📦'}</div>`;
 
   document.getElementById('detail-content').innerHTML = `
-    ${photoHTML}
+    ${photoBtn}
     <div class="detail-name">${it.name}</div>
     <div class="detail-cat">${[it.category,it.brand,loc].filter(Boolean).join(' · ')}</div>
     <div class="detail-grid">
