@@ -9,6 +9,43 @@ const SHEETS = {
   PAYMENTS:    'Payments'
 };
 
+const DOCUMENT_TEMPLATES = {
+  CONTRACT:  '1ZjHj8rmzSyJkcs6hpOOvCLev8c_fFOl3vn-cYSt7VWU',
+  EXTENSION: '1_5InwAOi9cXo1sccip0jJsvcHn-CYJfFFURhh0Ht_hE'
+};
+
+const TENANT_DOCUMENTS_FOLDER = 'Plus One - Tenant Documents';
+const MAX_TENANT_UPLOAD_BYTES = 15 * 1024 * 1024;
+
+const DOCUMENT_TEMPLATE_CHECKS = {
+  CONTRACT: {
+    minimumParagraphs: 117,
+    requiredText: [
+      'ՊԱՅՄԱՆԱԳՐԻ ԱՌԱՐԿԱՆ',
+      'ՊԱՅՄԱՆԱԳՐԻ ԺԱՄԿԵՏԸ',
+      'ՊԱՅՄԱՆԱԳՐԻ ԳԻՆԸ ԵՎ ՎՃԱՐՄԱՆ ԿԱՐԳԸ',
+      'ԿՈՂՄԵՐԻ ԻՐԱՎՈՒՆՔՆԵՐԸ ԵՎ ՊԱՐՏԱԿԱՆՈՒԹՅՈՒՆՆԵՐԸ',
+      'ԿՈՂՄԵՐԻ ՊԱՏԱՍԽԱՆԱՏՎՈՒԹՅՈՒՆԸ',
+      'ՎԱՐՁԱԿԱԼԱԾ ՕԲՅԵԿՏԻ ԲԱՐԵԼԱՎՈՒՄՆԵՐԸ',
+      'ՀԱՏՈՒԿ ՊԱՅՄԱՆՆԵՐ',
+      'ՊԱՅՄԱՆԱԳՐԻ ՎԱՂԱԺԱՄԿԵՏ ԼՈՒԾՄԱՆ ՀԻՄՔԵՐԸ',
+      'ԱՆՀԱՂԹԱՀԱՐԵԼԻ ՈԻԺԻ ԱԶԴԵՑՈՒԹՅՈՒՆԸ',
+      'ԵԶՐԱՓԱԿԻՉ ԴՐՈՒՅԹՆԵՐ',
+      'ԿՈՂՄԵՐԻ ՏՎՅԱԼՆԵՐԸ և ԻՐԱՎԱԲԱՆԱԿԱՆ ՀԱՍՑԵՆԵՐԸ'
+    ]
+  },
+  EXTENSION: {
+    minimumParagraphs: 27,
+    requiredText: [
+      'ԼՐԱՑՈՒՑԻՉ ՀԱՄԱՁԱՅՆԱԳԻՐ',
+      'Հոդված 1. Պայմանագրի ժամկետի երկարաձգում',
+      'Հոդված 2. Վճարման հատուկ պայմաններ',
+      'Հոդված 3. Եզրափակիչ դրույթներ',
+      'ԿՈՂՄԵՐԻ ՏՎՅԱԼՆԵՐԸ ԵՎ ՍՏՈՐԱԳՐՈՒԹՅՈՒՆՆԵՐԸ'
+    ]
+  }
+};
+
 
 // â”€â”€ Electricity tariff rates (AMD per kWh) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const AMD_PER_KWH_DAY   = 54;   // T1 Day tariff   â€” edit here
@@ -54,6 +91,14 @@ function doGet(e) {
     if (action === 'repairMeterHistory') return json(e, repairMeterHistory_(e.parameter));
     if (action === 'deletePayment') return json(e, deletePayment_(e.parameter));
     if (action === 'updateTenant')  return json(e, updateTenant_(e.parameter));
+    if (action === 'getTenantFolder') return json(e, getTenantFolder_(e.parameter));
+    if (action === 'generateContract') return json(e, idempotentDocumentGeneration_(
+      action, e.parameter, () => generateContract_(e.parameter)
+    ));
+    if (action === 'generateExtension') return json(e, idempotentDocumentGeneration_(
+      action, e.parameter, () => generateExtension_(e.parameter)
+    ));
+    if (action === 'testDocuments') return json(e, testDocumentTemplates_());
     if (action === 'test')          return json(e, runTest_());
     return json(e, { ok: false, error: 'Unknown action: ' + action });
   } catch (err) {
@@ -62,6 +107,16 @@ function doGet(e) {
 }
 
 // â”€â”€ JSONP / JSON response â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function doPost(e) {
+  try {
+    const action = String((e.parameter.action || '')).trim();
+    if (action === 'uploadTenantFile') return json(e, uploadTenantFile_(e.parameter));
+    return json(e, { ok: false, error: 'Unknown POST action: ' + action });
+  } catch (err) {
+    return json(e, { ok: false, error: String(err && err.message ? err.message : err) });
+  }
+}
+
 function json(e, obj) {
   const callback = e && e.parameter && e.parameter.callback;
   if (callback) {
@@ -890,6 +945,341 @@ function setTenantCell_(sh, row, map, possibleHeaders, value) {
     }
   }
   throw new Error('Missing tenants column: ' + possibleHeaders[0]);
+}
+
+// Contract templates are copied as-is; only {{VARIABLE}} markers are replaced.
+function generateContract_(p) {
+  const values = commonDocumentValues_(p);
+  const termStart = p.termStart || p.documentDate;
+  const termEnd = p.termEnd || addMonthsDateValue_(termStart, 3);
+  values.WING = contractWing_(p.wing);
+  values.UNIT_DESCRIPTION = contractUnit_(p.unitDescription);
+  values.TERM_START = documentDate_(termStart);
+  values.TERM_END = documentDate_(termEnd);
+  values.MONTHLY_RENT = documentMoney_(p.monthlyRent);
+  values.RENT_IN_WORDS = String(p.rentInWords || '').trim();
+  values.PAYMENT_DAY = String(p.paymentDay || '').trim();
+  values.FIRST_PAYMENT_DATE = documentDate_(p.firstPaymentDate || termStart);
+  values.DEPOSIT_PAYMENT_DATE = documentDate_(p.depositPaymentDate || termStart);
+
+  return createFromDocumentTemplate_(
+    DOCUMENT_TEMPLATES.CONTRACT,
+    'Պայմանագիր - ' + values.TENANT_NAME + ' - ' + values.DOCUMENT_DATE,
+    values,
+    DOCUMENT_TEMPLATE_CHECKS.CONTRACT,
+    tenantFolder_(p)
+  );
+}
+
+function idempotentDocumentGeneration_(action, p, createFn) {
+  const requestId = String(p.requestId || '').trim();
+  if (!requestId) return createFn();
+
+  const cache = CacheService.getScriptCache();
+  const cacheKey = 'document:' + action + ':' + requestId;
+  const cached = cache.get(cacheKey);
+  if (cached) return JSON.parse(cached);
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const afterLock = cache.get(cacheKey);
+    if (afterLock) return JSON.parse(afterLock);
+
+    const result = createFn();
+    cache.put(cacheKey, JSON.stringify(result), 21600);
+    return result;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function generateExtension_(p) {
+  const values = commonDocumentValues_(p);
+  const extensionStart = p.termStart || p.specialPeriodEnd || p.documentDate;
+  const extensionEnd = p.termEnd || addMonthsDateValue_(extensionStart, 1);
+  const specialPeriodEnd = p.specialPeriodEnd || extensionStart;
+  const specialPeriodStart = p.specialPeriodStart || addMonthsDateValue_(specialPeriodEnd, -1);
+  values.EXTENSION_NUMBER = String(p.extensionNumber || '1').trim();
+  values.ORIGINAL_CONTRACT_DATE = documentDate_(p.originalContractDate || p.documentDate);
+  values.WING = String(p.wing || '').trim();
+  values.UNIT_DESCRIPTION = extensionUnit_(p.unitDescription);
+  values.EXTENSION_PERIOD_TEXT = String(p.extensionPeriodText || '').trim();
+  values.EXTENSION_START = documentDate_(extensionStart);
+  values.EXTENSION_END = documentDate_(extensionEnd);
+  values.SPECIAL_PERIOD_START = documentDate_(specialPeriodStart);
+  values.SPECIAL_PERIOD_END = documentDate_(specialPeriodEnd);
+  values.SPECIAL_RENT_AMOUNT = documentMoney_(p.specialRentAmount || p.monthlyRent);
+  values.SPECIAL_RENT_IN_WORDS = String(p.specialRentInWords || p.rentInWords || '').trim();
+  values.SPECIAL_PAYMENT_DEADLINE = documentDate_(p.specialPaymentDeadline || p.documentDate);
+
+  return createFromDocumentTemplate_(
+    DOCUMENT_TEMPLATES.EXTENSION,
+    'Լրացուցիչ համաձայնագիր թիվ ' + values.EXTENSION_NUMBER + ' - ' +
+      values.TENANT_NAME + ' - ' + values.DOCUMENT_DATE,
+    values,
+    DOCUMENT_TEMPLATE_CHECKS.EXTENSION,
+    tenantFolder_(p)
+  );
+}
+
+function commonDocumentValues_(p) {
+  return {
+    CITY: String(p.city || 'ք. Երևան').trim(),
+    DOCUMENT_DATE: documentDate_(p.documentDate),
+    TENANT_NAME: String(p.tenantName || '').trim(),
+    TENANT_NAME_QUOTED: quotedTenantName_(p.tenantName, p.entityType),
+    PROPERTY_ADDRESS: String(p.propertyAddress || '').trim(),
+    FLOOR: String(p.floor || '').trim().replace(/\s*հարկ$/i, ''),
+    PURPOSE: String(p.purpose || '').trim(),
+    TENANT_ADDRESS: String(p.tenantAddress || p.legalAddress || '').trim(),
+    TENANT_TAX_ID: String(p.hvhh || '').trim(),
+    TENANT_BANK: String(p.tenantBank || '').trim(),
+    TENANT_BANK_ACCOUNT: String(p.tenantBankAccount || '').trim(),
+    TENANT_PHONE: documentPhone_(p.phone)
+  };
+}
+
+function documentPhone_(value) {
+  let digits = String(value || '').replace(/\D/g, '');
+  if (digits.length === 9 && digits.charAt(0) === '0') digits = digits.slice(1);
+  if (digits.length === 11 && digits.indexOf('374') === 0) digits = digits.slice(3);
+  if (digits.length !== 8) return String(value || '').trim();
+  return '+374 ' + digits.slice(0, 2) + ' ' + digits.slice(2);
+}
+
+function tenantFolderName_(p) {
+  const apt = String(p.apt || '').trim();
+  const tenantName = String(p.tenantName || '').trim();
+  if (!apt) throw new Error('Tenant office is required');
+  return ('Office ' + apt + (tenantName ? ' - ' + tenantName : ''))
+    .replace(/[\\/:*?"<>|]/g, '-')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function tenantFolderPropertyKey_(apt) {
+  return 'TENANT_FOLDER_' + Utilities.base64EncodeWebSafe(String(apt || '').trim())
+    .replace(/=+$/g, '');
+}
+
+function tenantDocumentsRoot_() {
+  const props = PropertiesService.getScriptProperties();
+  const propertyKey = 'TENANT_DOCUMENTS_ROOT_ID_V2';
+  const savedId = props.getProperty(propertyKey);
+  if (savedId) {
+    try { return DriveApp.getFolderById(savedId); } catch (err) {}
+  }
+
+  const myDrive = DriveApp.getRootFolder();
+  const matches = myDrive.getFoldersByName(TENANT_DOCUMENTS_FOLDER);
+  const folder = matches.hasNext() ? matches.next() : myDrive.createFolder(TENANT_DOCUMENTS_FOLDER);
+  props.setProperty(propertyKey, folder.getId());
+  return folder;
+}
+
+function moveFolderIntoTenantRoot_(folder) {
+  const root = tenantDocumentsRoot_();
+  const parents = folder.getParents();
+  while (parents.hasNext()) {
+    if (parents.next().getId() === root.getId()) return folder;
+  }
+  folder.moveTo(root);
+  return folder;
+}
+
+function tenantFolder_(p) {
+  const apt = String(p.apt || '').trim();
+  const desiredName = tenantFolderName_(p);
+  const props = PropertiesService.getScriptProperties();
+  const key = tenantFolderPropertyKey_(apt);
+  const savedId = props.getProperty(key);
+  if (savedId) {
+    try {
+      const saved = DriveApp.getFolderById(savedId);
+      if (saved.getName() !== desiredName) saved.setName(desiredName);
+      return moveFolderIntoTenantRoot_(saved);
+    } catch (err) {
+      props.deleteProperty(key);
+    }
+  }
+
+  const lock = LockService.getUserLock();
+  lock.waitLock(30000);
+  try {
+    const afterLockId = props.getProperty(key);
+    if (afterLockId) {
+      try { return moveFolderIntoTenantRoot_(DriveApp.getFolderById(afterLockId)); } catch (err) {}
+    }
+
+    const root = tenantDocumentsRoot_();
+    const exact = root.getFoldersByName(desiredName);
+    const folder = exact.hasNext() ? exact.next() : root.createFolder(desiredName);
+    props.setProperty(key, folder.getId());
+    return folder;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function getTenantFolder_(p) {
+  const folder = tenantFolder_(p);
+  return { ok: true, folderId: folder.getId(), folderUrl: folder.getUrl() };
+}
+
+function uploadTenantFile_(p) {
+  const fileName = String(p.fileName || '').trim()
+    .replace(/[\\/:*?"<>|]/g, '-');
+  const mimeType = String(p.mimeType || 'application/octet-stream').trim();
+  const base64 = String(p.fileData || '').replace(/^data:[^;]+;base64,/, '');
+  if (!fileName) throw new Error('File name is required');
+  if (!base64) throw new Error('File data is required');
+
+  const bytes = Utilities.base64Decode(base64);
+  if (bytes.length > MAX_TENANT_UPLOAD_BYTES) {
+    throw new Error('File is too large. Maximum size is 15 MB.');
+  }
+
+  const folder = tenantFolder_(p);
+  const file = folder.createFile(Utilities.newBlob(bytes, mimeType, fileName));
+  return {
+    ok: true,
+    fileName: file.getName(),
+    fileUrl: file.getUrl(),
+    folderUrl: folder.getUrl()
+  };
+}
+
+function createFromDocumentTemplate_(templateId, name, values, integrityCheck, outputFolder) {
+  const template = DriveApp.getFileById(templateId);
+  const folder = outputFolder || null;
+  const copy = folder ? template.makeCopy(name, folder) : template.makeCopy(name);
+  const document = DocumentApp.openById(copy.getId());
+  const body = document.getBody();
+
+  assertDocumentTemplateIntegrity_(body, integrityCheck);
+
+  Object.keys(values).forEach(key => {
+    body.replaceText(
+      '\\{\\{' + key + '\\}\\}',
+      safeDocumentReplacement_(values[key])
+    );
+  });
+
+  document.saveAndClose();
+
+  const completedDocument = DocumentApp.openById(copy.getId());
+  const completedBody = completedDocument.getBody();
+  assertDocumentTemplateIntegrity_(completedBody, integrityCheck);
+  const remaining = completedBody.getText().match(/\{\{[A-Z0-9_]+\}\}/g);
+  if (remaining && remaining.length) {
+    copy.setTrashed(true);
+    throw new Error('Unfilled template variables: ' + remaining.join(', '));
+  }
+
+  completedDocument.saveAndClose();
+  Utilities.sleep(1000);
+  const pdfBlob = copy.getBlob().getAs(MimeType.PDF).setName(name + '.pdf');
+  const pdfFile = folder ? folder.createFile(pdfBlob) : DriveApp.createFile(pdfBlob);
+  return {
+    ok: true,
+    docUrl: 'https://docs.google.com/document/d/' + copy.getId() + '/edit',
+    pdfUrl: pdfFile.getUrl(),
+    folderUrl: folder ? folder.getUrl() : ''
+  };
+}
+
+function assertDocumentTemplateIntegrity_(body, check) {
+  if (!check) return;
+  const paragraphs = body.getParagraphs();
+  if (paragraphs.length < check.minimumParagraphs) {
+    throw new Error(
+      'Document template is incomplete: expected at least ' +
+      check.minimumParagraphs + ' paragraphs, found ' + paragraphs.length
+    );
+  }
+
+  const text = body.getText();
+  const missing = check.requiredText.filter(value => text.indexOf(value) === -1);
+  if (missing.length) {
+    throw new Error('Document template is missing required clauses: ' + missing.join(' | '));
+  }
+}
+
+function testDocumentTemplates_() {
+  const results = {};
+  [
+    ['contract', DOCUMENT_TEMPLATES.CONTRACT, DOCUMENT_TEMPLATE_CHECKS.CONTRACT],
+    ['extension', DOCUMENT_TEMPLATES.EXTENSION, DOCUMENT_TEMPLATE_CHECKS.EXTENSION]
+  ].forEach(item => {
+    const document = DocumentApp.openById(item[1]);
+    const body = document.getBody();
+    assertDocumentTemplateIntegrity_(body, item[2]);
+    results[item[0]] = {
+      ok: true,
+      paragraphCount: body.getParagraphs().length,
+      templateId: item[1]
+    };
+  });
+  return { ok: true, templates: results };
+}
+
+// Visible in the Apps Script function dropdown. Run once to authorize Drive/Docs.
+function authorizeDocuments() {
+  return testDocumentTemplates_();
+}
+
+function safeDocumentReplacement_(value) {
+  return String(value == null ? '' : value).replace(/\\/g, '\\\\').replace(/\$/g, '\\$');
+}
+
+function documentDate_(value) {
+  const text = String(value || '').trim();
+  if (!text) return '';
+  const iso = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return iso[3] + '.' + iso[2] + '.' + iso[1];
+  return text.replace(/թ\.?$/, '');
+}
+
+function addMonthsDateValue_(value, months) {
+  const text = String(value || '').trim();
+  let match = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) {
+    const armenianDate = text.match(/^(\d{2})\.(\d{2})\.(\d{4})/);
+    if (!armenianDate) return '';
+    match = [armenianDate[0], armenianDate[3], armenianDate[2], armenianDate[1]];
+  }
+
+  const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1 + months, Number(match[3])));
+  return Utilities.formatDate(date, 'UTC', 'yyyy-MM-dd');
+}
+
+function documentMoney_(value) {
+  const number = Math.round(num_(value));
+  return number ? number.toLocaleString('en-US') : '';
+}
+
+function contractWing_(value) {
+  const wing = String(value || '').trim();
+  if (!wing) return '';
+  return /ից$/.test(wing) ? wing : wing + 'ից';
+}
+
+function contractUnit_(value) {
+  return String(value || '').trim().replace(/տարածք(?:ը|ի)?$/, 'տարածքը');
+}
+
+function extensionUnit_(value) {
+  return String(value || '').trim().replace(/տարածք(?:ը|ի)?$/, 'տարածքի');
+}
+
+function quotedTenantName_(value, entityType) {
+  const name = String(value || '').trim();
+  if (!name) return '';
+  if (String(entityType || '').toLowerCase() !== 'legal') return name;
+
+  const match = name.match(/^(.*?)(\s+(?:ԱՁ|ՍՊԸ|ՓԲԸ|ԲԲԸ|ՀԿ|Հիմնադրամ))$/);
+  return match ? '«' + match[1].trim() + '»' + match[2] : '«' + name + '»';
 }
 
 // â”€â”€ TEST (open ?action=test in browser to diagnose) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
