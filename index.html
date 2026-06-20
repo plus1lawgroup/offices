@@ -3212,10 +3212,7 @@ function makeElecMsg(apt) {
 function makeRentMsg(apt) {
   var t = tenants.find(function(x) { return x.apt === apt; }) || {};
   if (!t.apt) return '';
-  return 'Ողջույն հարգելի գործընկեր,\n\n' +
-    'Հիշեցնում ենք, որ ընթացիկ ամսվա ' + (t.day || '') +
-    '-ը Ձեր գրասենյակի վարձավճարի օրն է։\n\n' +
-    'Շնորհակալություն';
+  return 'Ողջույն հարգելի գործընկեր, հիշեցնում են վարձավճարի վճարման անհրաժեշտության մասին';
 }
 
 function makeMonthReport() {
